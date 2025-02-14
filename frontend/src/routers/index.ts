@@ -5,20 +5,29 @@ import { AxiosCanceler } from '@/api/helper/axios-cancel';
 
 const axiosCanceler = new AxiosCanceler();
 
-/**
- * @description 路由拦截 beforeEach（路由配置无数种方法，个人觉得最简便）
- * */
 router.beforeEach((to, from, next) => {
     NProgress.start();
     axiosCanceler.removeAllPending();
     const globalStore = GlobalStore();
 
+    if (globalStore.isIntl && to.path.includes('/xpack/alert')) {
+        next({ name: '404' });
+        NProgress.done();
+        return;
+    }
+
+    if (to.name !== 'entrance' && !globalStore.isLogin) {
+        next({
+            name: 'entrance',
+            params: to.params,
+        });
+        NProgress.done();
+        return;
+    }
     if (to.name === 'entrance' && globalStore.isLogin) {
         if (to.params.code === globalStore.entrance) {
-            globalStore.setLogStatus(false);
             next({
-                name: 'entrance',
-                params: { code: globalStore.entrance },
+                name: 'home',
             });
             NProgress.done();
             return;

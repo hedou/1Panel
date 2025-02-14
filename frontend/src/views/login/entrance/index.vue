@@ -1,87 +1,74 @@
 <template>
     <div>
-        <div class="login-backgroud" v-if="isSafety && !isErr && !isNotFound">
-            <div class="login-wrapper">
-                <div :class="screenWidth > 1110 ? 'left inline-block' : ''">
-                    <div class="login-title">
-                        <span>{{ $t('commons.login.title') }}</span>
-                    </div>
-                    <img src="@/assets/images/1panel-login.png" alt="" v-if="screenWidth > 1110" />
-                </div>
-                <div :class="screenWidth > 1110 ? 'right inline-block' : ''">
-                    <div class="login-container">
-                        <LoginForm ref="loginRef"></LoginForm>
+        <div v-if="init">
+            <div v-if="errStatus === ''">
+                <div class="login-background">
+                    <div class="login-wrapper">
+                        <div :class="screenWidth > 1110 ? 'left inline-block' : ''">
+                            <div class="login-title">
+                                <span>{{ globalStore.themeConfig.title || $t('setting.description') }}</span>
+                            </div>
+                            <img src="@/assets/images/1panel-login.png" alt="" v-if="screenWidth > 1110" />
+                        </div>
+                        <div :class="screenWidth > 1110 ? 'right inline-block' : ''">
+                            <div class="login-container">
+                                <LoginForm ref="loginRef"></LoginForm>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
-        <div v-if="!isSafety && !isErr && !isNotFound">
-            <UnSafe />
-        </div>
-        <div v-if="isErr && mySafetyCode.code === 'err-ip' && !isNotFound">
-            <ErrIP />
-        </div>
-        <div v-if="isErr && mySafetyCode.code === 'err-domain' && !isNotFound">
-            <ErrDomain />
-        </div>
-        <div v-if="isNotFound">
-            <ErrFound />
+
+            <div v-else>
+                <div v-if="errStatus.indexOf('code-') !== -1">
+                    <ErrCode :code="errStatus.replaceAll('code-', '')" />
+                </div>
+                <div v-if="errStatus === 'err-found'">
+                    <ErrFound />
+                </div>
+            </div>
         </div>
     </div>
 </template>
 
 <script setup lang="ts" name="login">
-import { checkIsSafety } from '@/api/modules/auth';
 import LoginForm from '../components/login-form.vue';
-import UnSafe from '@/components/error-message/unsafe.vue';
-import ErrIP from '@/components/error-message/err_ip.vue';
+import ErrCode from '@/components/error-message/error_code.vue';
 import ErrFound from '@/components/error-message/404.vue';
-import ErrDomain from '@/components/error-message/err_domain.vue';
 import { ref, onMounted } from 'vue';
 import { GlobalStore } from '@/store';
+import { getXpackSettingForTheme } from '@/utils/xpack';
 const globalStore = GlobalStore();
 
-const isSafety = ref(true);
 const screenWidth = ref(null);
-const isErr = ref();
-const isNotFound = ref();
+const errStatus = ref('x');
+const init = ref(false);
 
 const mySafetyCode = defineProps({
     code: {
         type: String,
-        required: true,
         default: '',
     },
 });
 
 const getStatus = async () => {
-    isErr.value = true;
     let code = mySafetyCode.code;
-    if (code === 'err-ip' || code === 'err-domain') {
-        code = globalStore.entrance;
-    }
-    const res = await checkIsSafety(code);
-    isErr.value = false;
-    globalStore.entrance = '';
-    if (res.data === 'disable') {
-        if (code === '') {
-            isNotFound.value = false;
-        } else {
-            isNotFound.value = true;
-        }
-        return;
-    }
-    isNotFound.value = false;
-    if (res.data !== 'pass') {
-        isSafety.value = false;
-        return;
-    }
-    if (res.data === 'pass') {
+    if (code != '') {
         globalStore.entrance = code;
     }
+    await getXpackSettingForTheme();
+    let info = globalStore.errStatus;
+    if (info?.startsWith('err-') || info?.startsWith('code-')) {
+        errStatus.value = info;
+        init.value = true;
+        return;
+    }
+    errStatus.value = '';
+    init.value = true;
 };
 
 onMounted(() => {
+    globalStore.isOnRestart = false;
     getStatus();
     screenWidth.value = document.body.clientWidth;
     window.onresize = () => {
@@ -99,7 +86,7 @@ onMounted(() => {
     align-items: center;
 }
 
-.login-backgroud {
+.login-background {
     height: 100vh;
     background: url(@/assets/images/1panel-login-bg.png) no-repeat,
         radial-gradient(153.25% 257.2% at 118.99% 181.67%, rgba(50, 132, 255, 0.2) 0%, rgba(82, 120, 255, 0) 100%)
@@ -141,13 +128,13 @@ onMounted(() => {
         text-align: right;
         margin-right: 10%;
         span:first-child {
-            color: $primary-color;
+            color: #005eeb;
             font-size: 40px;
             font-family: pingFangSC-Regular;
             font-weight: 600;
-            // @media only screen and (max-width: 1440px) {
-            //     margin-left: 0;
-            // }
+            @media only screen and (max-width: 768px) {
+                font-size: 35px;
+            }
         }
         @media only screen and (max-width: 1110px) {
             margin-bottom: 20px;
@@ -169,6 +156,9 @@ onMounted(() => {
         }
         @media only screen and (max-width: 1110px) {
             margin: 60px auto 0;
+        }
+        @media only screen and (max-width: 768px) {
+            width: 100%;
         }
     }
 }

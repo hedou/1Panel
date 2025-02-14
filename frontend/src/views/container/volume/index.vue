@@ -6,10 +6,10 @@
             <span>{{ $t('container.startIn') }}</span>
         </el-card>
 
-        <LayoutContent :title="$t('container.volume')" :class="{ mask: dockerStatus != 'Running' }">
+        <LayoutContent :title="$t('container.volume', 2)" :class="{ mask: dockerStatus != 'Running' }">
             <template #toolbar>
-                <el-row>
-                    <el-col :span="16">
+                <div class="flex justify-between gap-2 flex-wrap sm:flex-row">
+                    <div class="flex flex-wrap gap-3">
                         <el-button type="primary" @click="onCreate()">
                             {{ $t('container.createVolume') }}
                         </el-button>
@@ -19,22 +19,12 @@
                         <el-button :disabled="selects.length === 0" @click="batchDelete(null)">
                             {{ $t('commons.button.delete') }}
                         </el-button>
-                    </el-col>
-                    <el-col :span="8">
+                    </div>
+                    <div class="flex flex-wrap gap-3">
                         <TableSetting @search="search()" />
-                        <div class="search-button">
-                            <el-input
-                                v-model="searchName"
-                                clearable
-                                @clear="search()"
-                                suffix-icon="Search"
-                                @keyup.enter="search()"
-                                @change="search()"
-                                :placeholder="$t('commons.button.search')"
-                            ></el-input>
-                        </div>
-                    </el-col>
-                </el-row>
+                        <TableSearch @search="search()" v-model:searchName="searchName" />
+                    </div>
+                </div>
             </template>
             <template #main>
                 <ComplexTable
@@ -44,9 +34,27 @@
                     @search="search"
                 >
                     <el-table-column type="selection" fix />
-                    <el-table-column :label="$t('commons.table.name')" min-width="80" prop="name" fix>
+                    <el-table-column
+                        :label="$t('commons.table.name')"
+                        min-width="100"
+                        :width="mobile ? 220 : 'auto'"
+                        prop="name"
+                        fix
+                        show-overflow-tooltip
+                    >
                         <template #default="{ row }">
-                            <Tooltip @click="onInspect(row.name)" :text="row.name" />
+                            <el-text type="primary" class="cursor-pointer" @click="onInspect(row.name)">
+                                {{ row.name }}
+                            </el-text>
+                        </template>
+                    </el-table-column>
+                    <el-table-column :label="$t('container.volumeDir')" min-width="100">
+                        <template #default="{ row }">
+                            <el-button type="primary" link @click="toFolder(row.mountpoint)">
+                                <el-icon>
+                                    <FolderOpened />
+                                </el-icon>
+                            </el-button>
                         </template>
                     </el-table-column>
                     <el-table-column
@@ -72,33 +80,40 @@
             </template>
         </LayoutContent>
 
+        <OpDialog ref="opRef" @search="search" />
+
         <CodemirrorDialog ref="codemirror" />
         <CreateDialog @search="search" ref="dialogCreateRef" />
     </div>
 </template>
 
 <script lang="ts" setup>
-import Tooltip from '@/components/tooltip/index.vue';
-import TableSetting from '@/components/table-setting/index.vue';
 import CreateDialog from '@/views/container/volume/create/index.vue';
 import CodemirrorDialog from '@/components/codemirror-dialog/index.vue';
-import { reactive, onMounted, ref } from 'vue';
+import { reactive, onMounted, ref, computed } from 'vue';
 import { computeSize, dateFormat } from '@/utils/util';
 import { deleteVolume, searchVolume, inspect, loadDockerStatus, containerPrune } from '@/api/modules/container';
 import { Container } from '@/api/interface/container';
 import i18n from '@/lang';
-import { useDeleteData } from '@/hooks/use-delete-data';
 import router from '@/routers';
 import { MsgSuccess } from '@/utils/message';
 import { ElMessageBox } from 'element-plus';
+import { GlobalStore } from '@/store';
+const globalStore = GlobalStore();
+
+const mobile = computed(() => {
+    return globalStore.isMobile();
+});
 
 const loading = ref();
-const detailInfo = ref();
 const codemirror = ref();
+
+const opRef = ref();
 
 const data = ref();
 const selects = ref<any>([]);
 const paginationConfig = reactive({
+    cacheSizeKey: 'container-volume-page-size',
     currentPage: 1,
     pageSize: 10,
     total: 0,
@@ -124,7 +139,9 @@ const loadStatus = async () => {
 const goSetting = async () => {
     router.push({ name: 'ContainerSetting' });
 };
-
+const toFolder = (folder: string) => {
+    router.push({ path: '/hosts/files', query: { path: folder } });
+};
 const dialogCreateRef = ref<DialogExpose>();
 
 interface DialogExpose {
@@ -154,10 +171,10 @@ const search = async () => {
 
 const onInspect = async (id: string) => {
     const res = await inspect({ id: id, type: 'volume' });
-    detailInfo.value = JSON.stringify(JSON.parse(res.data), null, 2);
+    let detailInfo = JSON.stringify(JSON.parse(res.data), null, 2);
     let param = {
         header: i18n.global.t('commons.button.view'),
-        detailInfo: detailInfo.value,
+        detailInfo: detailInfo,
     };
     codemirror.value!.acceptParams(param);
 };
@@ -191,16 +208,24 @@ const onClean = () => {
 };
 
 const batchDelete = async (row: Container.VolumeInfo | null) => {
-    let names: Array<string> = [];
-    if (row === null) {
+    let names = [];
+    if (row) {
+        names.push(row.name);
+    } else {
         selects.value.forEach((item: Container.VolumeInfo) => {
             names.push(item.name);
         });
-    } else {
-        names.push(row.name);
     }
-    await useDeleteData(deleteVolume, { names: names }, 'commons.msg.delete');
-    search();
+    opRef.value.acceptParams({
+        title: i18n.global.t('commons.button.delete'),
+        names: names,
+        msg: i18n.global.t('commons.msg.operatorHelper', [
+            i18n.global.t('container.volume'),
+            i18n.global.t('commons.button.delete'),
+        ]),
+        api: deleteVolume,
+        params: { names: names },
+    });
 };
 
 const buttons = [

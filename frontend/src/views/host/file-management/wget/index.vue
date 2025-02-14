@@ -1,5 +1,12 @@
 <template>
-    <el-drawer v-model="open" :before-close="handleClose" size="50%">
+    <el-drawer
+        v-model="open"
+        :destroy-on-close="true"
+        :before-close="handleClose"
+        size="50%"
+        :close-on-click-modal="false"
+        :close-on-press-escape="false"
+    >
         <template #header>
             <DrawerHeader :header="$t('file.download')" :back="handleClose" />
         </template>
@@ -21,8 +28,14 @@
                             <template #prepend><FileList :path="addForm.path" @choose="getPath"></FileList></template>
                         </el-input>
                     </el-form-item>
-                    <el-form-item :label="$t('file.name')" prop="name">
+                    <el-form-item :label="$t('commons.table.name')" prop="name">
                         <el-input v-model="addForm.name"></el-input>
+                    </el-form-item>
+                    <el-form-item>
+                        <el-checkbox v-model="addForm.ignoreCertificate">
+                            {{ $t('file.ignoreCertificate') }}
+                        </el-checkbox>
+                        <span class="input-help">{{ $t('file.ignoreCertificateHelper') }}</span>
                     </el-form-item>
                 </el-form>
             </el-col>
@@ -67,6 +80,7 @@ const addForm = reactive({
     url: '',
     path: '',
     name: '',
+    ignoreCertificate: false,
 });
 
 const em = defineEmits(['close']);
@@ -111,6 +125,7 @@ const acceptParams = (props: WgetProps) => {
     addForm.path = props.path;
     open.value = true;
     submitData.value = false;
+    addForm.ignoreCertificate = false;
 };
 
 defineExpose({ acceptParams });

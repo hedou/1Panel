@@ -11,6 +11,10 @@ type Server struct {
 	Line       int
 }
 
+func (s *Server) GetCodeBlock() string {
+	return ""
+}
+
 func NewServer(directive IDirective) (*Server, error) {
 	server := &Server{}
 	if block := directive.GetBlock(); block != nil {
@@ -127,13 +131,27 @@ func (s *Server) RemoveDirective(key string, params []string) {
 	var newDirectives []IDirective
 	for _, dir := range directives {
 		if dir.GetName() == key {
-			if len(params) > 0 {
-				oldParams := dir.GetParameters()
+			if len(params) == 0 {
+				continue
+			}
+			oldParams := dir.GetParameters()
+			if key == "location" {
+				if len(params) == len(oldParams) {
+					exist := true
+					for i := range params {
+						if params[i] != oldParams[i] {
+							exist = false
+							break
+						}
+					}
+					if exist {
+						continue
+					}
+				}
+			} else {
 				if oldParams[0] == params[0] {
 					continue
 				}
-			} else {
-				continue
 			}
 		}
 		newDirectives = append(newDirectives, dir)
@@ -247,6 +265,41 @@ func (s *Server) UpdateRootProxy(proxy []string) {
 	s.UpdateDirectiveBySecondKey("location", "/", newDir)
 }
 
+func (s *Server) UpdateRootProxyForAi(proxy []string) {
+	newDir := Directive{
+		Name:       "location",
+		Parameters: []string{"/"},
+		Block:      &Block{},
+	}
+	block := &Block{}
+	block.Directives = []IDirective{
+		&Directive{
+			Name: "proxy_buffering",
+			Parameters: []string{
+				"off",
+			},
+		},
+		&Directive{
+			Name: "proxy_cache",
+			Parameters: []string{
+				"off",
+			},
+		},
+		&Directive{
+			Name: "proxy_http_version",
+			Parameters: []string{
+				"1.1",
+			},
+		},
+	}
+	block.Directives = append(block.Directives, &Directive{
+		Name:       "proxy_pass",
+		Parameters: proxy,
+	})
+	newDir.Block = block
+	s.UpdateDirectiveBySecondKey("location", "/", newDir)
+}
+
 func (s *Server) UpdatePHPProxy(proxy []string, localPath string) {
 	newDir := Directive{
 		Name:       "location",
@@ -268,8 +321,37 @@ func (s *Server) UpdatePHPProxy(proxy []string, localPath string) {
 	})
 	if localPath == "" {
 		block.Directives = append(block.Directives, &Directive{
+			Name:       "set",
+			Parameters: []string{"$real_script_name", "$fastcgi_script_name"},
+		})
+		ifDir := &Directive{
+			Name:       "if",
+			Parameters: []string{"($fastcgi_script_name ~ \"^(.+?\\.php)(/.+)$\")"},
+		}
+		ifDir.Block = &Block{
+			Directives: []IDirective{
+				&Directive{
+					Name:       "set",
+					Parameters: []string{"$real_script_name", "$1"},
+				},
+				&Directive{
+					Name:       "set",
+					Parameters: []string{"$path_info", "$2"},
+				},
+			},
+		}
+		block.Directives = append(block.Directives, ifDir)
+		block.Directives = append(block.Directives, &Directive{
 			Name:       "fastcgi_param",
-			Parameters: []string{"SCRIPT_FILENAME", "$document_root$fastcgi_script_name"},
+			Parameters: []string{"SCRIPT_FILENAME", "$document_root$real_script_name"},
+		})
+		block.Directives = append(block.Directives, &Directive{
+			Name:       "fastcgi_param",
+			Parameters: []string{"SCRIPT_NAME", "$real_script_name"},
+		})
+		block.Directives = append(block.Directives, &Directive{
+			Name:       "fastcgi_param",
+			Parameters: []string{"PATH_INFO", "$path_info"},
 		})
 	} else {
 		block.Directives = append(block.Directives, &Directive{
@@ -301,7 +383,7 @@ func (s *Server) UpdateDirectiveBySecondKey(name string, key string, directive D
 func (s *Server) RemoveListenByBind(bind string) {
 	var listens []*ServerListen
 	for _, listen := range s.Listens {
-		if listen.Bind != bind || len(listen.Parameters) > 0 {
+		if listen.Bind != bind {
 			listens = append(listens, listen)
 		}
 	}
@@ -321,4 +403,31 @@ func (s *Server) AddHTTP2HTTPS() {
 	})
 	newDir.Block = block
 	s.UpdateDirectiveBySecondKey("if", "($scheme", newDir)
+}
+
+func (s *Server) UpdateAllowIPs(ips []string) {
+	index := -1
+	for i, directive := range s.Directives {
+		if directive.GetName() == "location" && directive.GetParameters()[0] == "/" {
+			index = i
+			break
+		}
+	}
+	ipDirectives := make([]IDirective, 0)
+	for _, ip := range ips {
+		ipDirectives = append(ipDirectives, &Directive{
+			Name:       "allow",
+			Parameters: []string{ip},
+		})
+	}
+	ipDirectives = append(ipDirectives, &Directive{
+		Name:       "deny",
+		Parameters: []string{"all"},
+	})
+	if index != -1 {
+		newDirectives := append(ipDirectives, s.Directives[index:]...)
+		s.Directives = append(s.Directives[:index], newDirectives...)
+	} else {
+		s.Directives = append(s.Directives, ipDirectives...)
+	}
 }

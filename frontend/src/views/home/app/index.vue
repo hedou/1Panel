@@ -1,38 +1,33 @@
 <template>
     <div>
-        <el-scrollbar max-height="500px">
+        <el-scrollbar height="525px" class="moz-height">
             <div class="h-app-card" v-for="(app, index) in apps" :key="index">
-                <el-row :gutter="10">
-                    <el-col :span="5">
-                        <div>
-                            <el-avatar shape="square" :size="55" :src="'data:image/png;base64,' + app.icon" />
+                <div class="flex justify-start items-center gap-2">
+                    <div class="w-14">
+                        <el-avatar shape="square" :size="55" :src="'data:image/png;base64,' + app.icon" />
+                    </div>
+                    <div class="flex-1 flex flex-col h-app-content">
+                        <span class="h-app-title">{{ app.name }}</span>
+                        <div class="h-app-desc">
+                            <span>
+                                {{ app.description }}
+                            </span>
                         </div>
-                    </el-col>
-                    <el-col :span="15">
-                        <div class="h-app-content">
-                            <div>
-                                <span class="h-app-title">{{ app.name }}</span>
-                            </div>
-                            <div class="h-app-desc">
-                                <span>
-                                    {{ language == 'zh' ? app.shortDescZh : app.shortDescEn }}
-                                </span>
-                            </div>
-                        </div>
-                    </el-col>
-                    <el-col :span="2">
+                    </div>
+                    <div>
                         <el-button
                             class="h-app-button"
                             type="primary"
                             plain
                             round
                             size="small"
-                            @click="goInstall(app.key)"
+                            :disabled="app.limit == 1 && app.installed"
+                            @click="goInstall(app.key, app.type)"
                         >
                             {{ $t('app.install') }}
                         </el-button>
-                    </el-col>
-                </el-row>
+                    </div>
+                </div>
                 <div class="h-app-divider" />
             </div>
         </el-scrollbar>
@@ -43,10 +38,8 @@
 import { App } from '@/api/interface/app';
 import { SearchApp } from '@/api/modules/app';
 import { reactive, ref } from 'vue';
-import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
 const router = useRouter();
-const language = useI18n().locale.value;
 
 let req = reactive({
     name: '',
@@ -57,14 +50,25 @@ let req = reactive({
 });
 
 let loading = ref(false);
-let apps = ref<App.App[]>([]);
+let apps = ref<App.AppDTO[]>([]);
 
 const acceptParams = (): void => {
     search(req);
 };
 
-const goInstall = (key: string) => {
-    router.push({ name: 'AppDetail', params: { appKey: key } });
+const goInstall = (key: string, type: string) => {
+    switch (type) {
+        case 'php':
+        case 'node':
+        case 'java':
+        case 'go':
+        case 'python':
+        case 'dotnet':
+            router.push({ path: '/websites/runtimes/' + type });
+            break;
+        default:
+            router.push({ name: 'AppAll', query: { install: key } });
+    }
 };
 
 const search = async (req: App.AppReq) => {
@@ -88,13 +92,14 @@ defineExpose({
     cursor: pointer;
     padding: 10px 15px;
     margin-right: 10px;
+    line-height: 18px;
 
     .h-app-content {
         padding-left: 15px;
         .h-app-title {
             font-weight: 500;
             font-size: 15px;
-            color: #1f2329;
+            color: var(--panel-text-color);
         }
 
         .h-app-desc {
@@ -117,5 +122,12 @@ defineExpose({
     margin-top: 13px;
     border: 0;
     border-top: var(--panel-border);
+}
+
+/* FOR MOZILLA */
+@-moz-document url-prefix() {
+    .moz-height {
+        height: 524px;
+    }
 }
 </style>

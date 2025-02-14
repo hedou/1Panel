@@ -1,6 +1,6 @@
 <template>
     <div>
-        <el-form label-position="left" label-width="80px">
+        <el-form label-position="left" label-width="80px" @submit.prevent>
             <el-form-item :label="$t('database.isOn')">
                 <el-switch
                     v-model="variables.slow_query_log"
@@ -31,7 +31,7 @@
             :placeholder="$t('database.noData')"
             :indent-with-tab="true"
             :tabSize="4"
-            style="height: calc(100vh - 428px); width: 100%"
+            :style="{ height: getDynamicHeight(), width: '100%' }"
             :lineWrapping="true"
             :matchBrackets="true"
             theme="cobalt"
@@ -42,7 +42,6 @@
             :disabled="true"
         />
 
-        <br />
         <ConfirmDialog @cancel="onCancel" ref="confirmDialogRef" @confirm="onSave"></ConfirmDialog>
     </div>
 </template>
@@ -52,13 +51,13 @@ import { javascript } from '@codemirror/lang-javascript';
 import { oneDark } from '@codemirror/theme-one-dark';
 import { nextTick, onBeforeUnmount, reactive, ref, shallowRef } from 'vue';
 import { Database } from '@/api/interface/database';
-import { LoadFile } from '@/api/modules/files';
 import ConfirmDialog from '@/components/confirm-dialog/index.vue';
-import { updateMysqlVariables } from '@/api/modules/database';
-import { dateFormatForName } from '@/utils/util';
+import { loadDBFile, updateMysqlVariables } from '@/api/modules/database';
+import { dateFormatForName, downloadWithContent } from '@/utils/util';
 import i18n from '@/lang';
-import { loadBaseDir } from '@/api/modules/setting';
 import { MsgError, MsgInfo, MsgSuccess } from '@/utils/message';
+import { GlobalStore } from '@/store';
+const globalStore = GlobalStore();
 
 const extensions = [javascript(), oneDark];
 const slowLogs = ref();
@@ -74,32 +73,37 @@ const confirmDialogRef = ref();
 const isWatch = ref();
 let timer: NodeJS.Timer | null = null;
 
-const mysqlName = ref();
 const variables = reactive({
     slow_query_log: 'OFF',
     long_query_time: 10,
 });
 
+const currentDB = reactive({
+    type: '',
+    database: '',
+});
 interface DialogProps {
-    mysqlName: string;
+    type: string;
+    database: string;
     variables: Database.MysqlVariables;
 }
 const acceptParams = async (params: DialogProps): Promise<void> => {
-    mysqlName.value = params.mysqlName;
+    currentDB.type = params.type;
+    currentDB.database = params.database;
     variables.slow_query_log = params.variables.slow_query_log;
     variables.long_query_time = Number(params.variables.long_query_time);
 
     if (variables.slow_query_log === 'ON') {
         currentStatus.value = true;
         detailShow.value = true;
-        const pathRes = await loadBaseDir();
-        let path = `${pathRes.data}/apps/mysql/${mysqlName.value}/data/1Panel-slow.log`;
-        loadMysqlSlowlogs(path);
+        loadMysqlSlowlogs();
         timer = setInterval(() => {
             if (variables.slow_query_log === 'ON' && isWatch.value) {
-                loadMysqlSlowlogs(path);
+                loadMysqlSlowlogs();
             }
         }, 1000 * 5);
+    } else {
+        detailShow.value = false;
     }
 };
 const emit = defineEmits(['loading']);
@@ -115,6 +119,21 @@ const handleSlowLogs = async () => {
         submitInputInfo: i18n.global.t('database.restartNow'),
     };
     confirmDialogRef.value!.acceptParams(params);
+};
+
+const getDynamicHeight = () => {
+    if (variables.slow_query_log === 'ON') {
+        if (globalStore.openMenuTabs) {
+            return `calc(100vh - 467px)`;
+        } else {
+            return `calc(100vh - 437px)`;
+        }
+    }
+    if (globalStore.openMenuTabs) {
+        return `calc(100vh - 413px)`;
+    } else {
+        return `calc(100vh - 383px)`;
+    }
 };
 
 const changeSlowLogs = () => {
@@ -136,14 +155,19 @@ const onCancel = async () => {
 };
 
 const onSave = async () => {
-    let param = [] as Array<Database.VariablesUpdate>;
+    let param = [] as Array<Database.VariablesUpdateHelper>;
     param.push({ param: 'slow_query_log', value: variables.slow_query_log });
     if (variables.slow_query_log === 'ON') {
         param.push({ param: 'long_query_time', value: variables.long_query_time + '' });
         param.push({ param: 'slow_query_log_file', value: '/var/lib/mysql/1Panel-slow.log' });
     }
+    let params = {
+        type: currentDB.type,
+        database: currentDB.database,
+        variables: param,
+    };
     emit('loading', true);
-    await updateMysqlVariables(param)
+    await updateMysqlVariables(params)
         .then(() => {
             emit('loading', false);
             currentStatus.value = variables.slow_query_log === 'ON';
@@ -160,17 +184,11 @@ const onDownload = async () => {
         MsgInfo(i18n.global.t('database.noData'));
         return;
     }
-    const downloadUrl = window.URL.createObjectURL(new Blob([slowLogs.value]));
-    const a = document.createElement('a');
-    a.style.display = 'none';
-    a.href = downloadUrl;
-    a.download = mysqlName.value + '-slowlogs-' + dateFormatForName(new Date()) + '.log';
-    const event = new MouseEvent('click');
-    a.dispatchEvent(event);
+    downloadWithContent(slowLogs.value, currentDB.database + '-slowlogs-' + dateFormatForName(new Date()) + '.log');
 };
 
-const loadMysqlSlowlogs = async (path: string) => {
-    const res = await LoadFile({ path: path });
+const loadMysqlSlowlogs = async () => {
+    const res = await loadDBFile(currentDB.type + '-slow-logs', currentDB.database);
     slowLogs.value = res.data || '';
     nextTick(() => {
         const state = view.value.state;

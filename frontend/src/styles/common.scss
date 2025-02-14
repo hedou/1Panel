@@ -1,3 +1,6 @@
+html {
+    font-family: Helvetica Neue, Helvetica, PingFang SC, Hiragino Sans GB, Arial, sans-serif;
+}
 .flx-center {
     display: flex;
     align-items: center;
@@ -11,6 +14,11 @@
 .flx-align-center {
     display: flex;
     align-items: center;
+}
+
+.flx-wrap {
+    display: flex;
+    flex-wrap: wrap;
 }
 
 .clearfix::after {
@@ -115,12 +123,11 @@
 
 .input-help {
     font-size: 12px;
-    word-break: break-all;
-    color: #8f959e;
-    transform: scale(0.9);
-    transform-origin: left;
-    width: 110%;
+    word-break: keep-all;
+    color: #adb0bc;
+    width: 100%;
     display: inline-block;
+    white-space: normal;
 }
 
 .input-error {
@@ -175,8 +182,8 @@
 
 .mask-prompt {
     position: absolute;
-    z-index: 9999;
-    top: 220px;
+    z-index: 1;
+    top: 320px;
     left: 45%;
     transform: translate(-50%, -50%);
     width: 400px;
@@ -213,7 +220,6 @@
         background: var(--el-button-bg-color, var(--el-fill-color-blank));
         border: 0;
         font-weight: 350;
-        border-left: 0;
         color: var(--el-button-text-color, var(--el-text-color-regular));
         text-align: center;
         box-sizing: border-box;
@@ -239,12 +245,18 @@
 // search条圆角
 .search-button {
     float: right;
+    width: 250px;
+    margin-right: 10px;
     .el-input__wrapper {
         border-radius: 50px;
     }
     .el-input-group__prepend {
         border-top-left-radius: 50px;
         border-bottom-left-radius: 50px;
+    }
+    .el-input-group__append {
+        border-top-right-radius: 50px;
+        border-bottom-right-radius: 50px;
     }
 }
 
@@ -276,6 +288,13 @@
     }
 }
 
+.mini-border-card {
+    width: 100%;
+    .el-card__body {
+        --el-card-padding: 12px 12px 0 22px;
+    }
+}
+
 .xterm-viewport::-webkit-scrollbar {
     width: 8px;
     height: 8px;
@@ -295,7 +314,6 @@
 
 .table-link {
     color: $primary-color;
-    font-weight: bold;
     cursor: pointer;
 }
 
@@ -325,7 +343,145 @@
     }
 }
 
-.no-active-button {
-    background: none;
-    border: none;
+.common-prompt {
+    margin-bottom: 20px !important;
+}
+
+.mini-form-item {
+    width: 40% !important;
+}
+
+.left-button {
+    margin-left: 10px;
+}
+
+.pre-select {
+    width: 85px !important;
+}
+
+.el-input-group__append {
+    border-left: 0;
+    background-color: var(--el-fill-color-light) !important;
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+    box-shadow: 0 1px 0 0 var(--el-input-border-color) inset, 0 -1px 0 0 var(--el-input-border-color) inset,
+        -1px 0 0 0 var(--el-input-border-color) inset;
+
+    &:hover {
+        color: var(--el-color-primary);
+        background-color: var(--el-color-primary-light-9) !important;
+    }
+}
+
+.tag-button {
+    &.no-active {
+        background: none;
+        border: none;
+    }
+}
+
+.limit-height-popover {
+    max-height: 300px;
+    overflow: auto;
+}
+
+.router-button {
+    margin-right: 30px;
+    padding: 10px;
+}
+
+.text-parent {
+    display: flex;
+    width: 100%;
+    margin-left: 2px;
+}
+
+.text-ellipsis {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.star-center {
+    height: 16px;
+    display: inline-block;
+    vertical-align: middle;
+}
+
+.p-ml-5 {
+    margin-left: 5px !important;
+}
+
+.p-mb-5 {
+    margin-bottom: 5px !important;
+}
+
+.p-w-200 {
+    width: 200px !important;
+}
+
+.p-w-100 {
+    width: 100px !important;
+}
+
+.p-w-150 {
+    width: 150px !important;
+}
+
+.p-w-400 {
+    width: 400px !important;
+}
+
+.p-ml-20 {
+    margin-left: 20px !important;
+}
+
+.p-mt-20 {
+    margin-top: 20px !important;
+}
+
+.el-tag {
+    cursor: pointer;
+}
+
+.dialog-footer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+}
+
+.monaco-editor-tree-light .el-tree-node__content:hover {
+    background-color: #e5eefd;
+}
+
+.monaco-editor-tree-light .el-tree-node.is-current > .el-tree-node__content {
+    background-color: #e5eefd;
+}
+
+.monaco-editor-tree-dark .el-tree-node__content:hover {
+    background-color: #111417;
+}
+
+.monaco-editor-tree-dark .el-tree-node.is-current > .el-tree-node__content {
+    background-color: #111417;
+}
+.check-label {
+    background: var(--panel-main-bg-color-10) !important;
+    .check-label-a {
+        color: var(--panel-color-primary);
+    }
+}
+.check-content {
+    background: var(--panel-main-bg-color-10);
+    pre {
+        margin: 0;
+        width: 350px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+}
+
+.el-descriptions {
+    overflow: hidden;
+    text-overflow: ellipsis;
 }

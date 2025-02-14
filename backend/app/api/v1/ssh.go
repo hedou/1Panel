@@ -4,15 +4,14 @@ import (
 	"github.com/1Panel-dev/1Panel/backend/app/api/v1/helper"
 	"github.com/1Panel-dev/1Panel/backend/app/dto"
 	"github.com/1Panel-dev/1Panel/backend/constant"
-	"github.com/1Panel-dev/1Panel/backend/global"
 	"github.com/gin-gonic/gin"
 )
 
 // @Tags SSH
-// @Summary Load host ssh setting info
-// @Description 加载 SSH 配置信息
+// @Summary Load host SSH setting info
 // @Success 200 {object} dto.SSHInfo
 // @Security ApiKeyAuth
+// @Security Timestamp
 // @Router /host/ssh/search [post]
 func (b *BaseApi) GetSSHInfo(c *gin.Context) {
 	info, err := sshService.GetSSHInfo()
@@ -24,21 +23,17 @@ func (b *BaseApi) GetSSHInfo(c *gin.Context) {
 }
 
 // @Tags SSH
-// @Summary Operate ssh
-// @Description 修改 SSH 服务状态
+// @Summary Operate SSH
 // @Accept json
 // @Param request body dto.Operate true "request"
+// @Success 200
 // @Security ApiKeyAuth
+// @Security Timestamp
 // @Router /host/ssh/operate [post]
-// @x-panel-log {"bodyKeys":["operation"],"paramKeys":[],"BeforeFuntions":[],"formatZH":"[operation] SSH ","formatEN":"[operation] SSH"}
+// @x-panel-log {"bodyKeys":["operation"],"paramKeys":[],"BeforeFunctions":[],"formatZH":"[operation] SSH ","formatEN":"[operation] SSH"}
 func (b *BaseApi) OperateSSH(c *gin.Context) {
 	var req dto.Operate
-	if err := c.ShouldBindJSON(&req); err != nil {
-		helper.ErrorWithDetail(c, constant.CodeErrBadRequest, constant.ErrTypeInvalidParams, err)
-		return
-	}
-	if err := global.VALID.Struct(req); err != nil {
-		helper.ErrorWithDetail(c, constant.CodeErrBadRequest, constant.ErrTypeInvalidParams, err)
+	if err := helper.CheckBindAndValidate(&req, c); err != nil {
 		return
 	}
 
@@ -50,26 +45,21 @@ func (b *BaseApi) OperateSSH(c *gin.Context) {
 }
 
 // @Tags SSH
-// @Summary Update host ssh setting
-// @Description 更新 SSH 配置
+// @Summary Update host SSH setting
 // @Accept json
-// @Param request body dto.SettingUpdate true "request"
+// @Param request body dto.SSHUpdate true "request"
 // @Success 200
 // @Security ApiKeyAuth
+// @Security Timestamp
 // @Router /host/ssh/update [post]
-// @x-panel-log {"bodyKeys":["key","value"],"paramKeys":[],"BeforeFuntions":[],"formatZH":"修改 SSH 配置 [key] => [value]","formatEN":"update SSH setting [key] => [value]"}
+// @x-panel-log {"bodyKeys":["key","value"],"paramKeys":[],"BeforeFunctions":[],"formatZH":"修改 SSH 配置 [key] => [value]","formatEN":"update SSH setting [key] => [value]"}
 func (b *BaseApi) UpdateSSH(c *gin.Context) {
-	var req dto.SettingUpdate
-	if err := c.ShouldBindJSON(&req); err != nil {
-		helper.ErrorWithDetail(c, constant.CodeErrBadRequest, constant.ErrTypeInvalidParams, err)
-		return
-	}
-	if err := global.VALID.Struct(req); err != nil {
-		helper.ErrorWithDetail(c, constant.CodeErrBadRequest, constant.ErrTypeInvalidParams, err)
+	var req dto.SSHUpdate
+	if err := helper.CheckBindAndValidate(&req, c); err != nil {
 		return
 	}
 
-	if err := sshService.Update(req.Key, req.Value); err != nil {
+	if err := sshService.Update(req); err != nil {
 		helper.ErrorWithDetail(c, constant.CodeErrInternalServer, constant.ErrTypeInternalServer, err)
 		return
 	}
@@ -77,22 +67,17 @@ func (b *BaseApi) UpdateSSH(c *gin.Context) {
 }
 
 // @Tags SSH
-// @Summary Update host ssh setting by file
-// @Description 上传文件更新 SSH 配置
+// @Summary Update host SSH setting by file
 // @Accept json
 // @Param request body dto.SSHConf true "request"
 // @Success 200
 // @Security ApiKeyAuth
+// @Security Timestamp
 // @Router /host/conffile/update [post]
-// @x-panel-log {"bodyKeys":[],"paramKeys":[],"BeforeFuntions":[],"formatZH":"修改 SSH 配置文件","formatEN":"update SSH conf"}
+// @x-panel-log {"bodyKeys":[],"paramKeys":[],"BeforeFunctions":[],"formatZH":"修改 SSH 配置文件","formatEN":"update SSH conf"}
 func (b *BaseApi) UpdateSSHByfile(c *gin.Context) {
 	var req dto.SSHConf
-	if err := c.ShouldBindJSON(&req); err != nil {
-		helper.ErrorWithDetail(c, constant.CodeErrBadRequest, constant.ErrTypeInvalidParams, err)
-		return
-	}
-	if err := global.VALID.Struct(req); err != nil {
-		helper.ErrorWithDetail(c, constant.CodeErrBadRequest, constant.ErrTypeInvalidParams, err)
+	if err := helper.CheckBindAndValidate(&req, c); err != nil {
 		return
 	}
 
@@ -104,22 +89,17 @@ func (b *BaseApi) UpdateSSHByfile(c *gin.Context) {
 }
 
 // @Tags SSH
-// @Summary Generate host ssh secret
-// @Description 生成 ssh 密钥
+// @Summary Generate host SSH secret
 // @Accept json
 // @Param request body dto.GenerateSSH true "request"
 // @Success 200
 // @Security ApiKeyAuth
+// @Security Timestamp
 // @Router /host/ssh/generate [post]
-// @x-panel-log {"bodyKeys":[],"paramKeys":[],"BeforeFuntions":[],"formatZH":"生成 SSH 密钥 ","formatEN":"generate SSH secret"}
+// @x-panel-log {"bodyKeys":[],"paramKeys":[],"BeforeFunctions":[],"formatZH":"生成 SSH 密钥 ","formatEN":"generate SSH secret"}
 func (b *BaseApi) GenerateSSH(c *gin.Context) {
 	var req dto.GenerateSSH
-	if err := c.ShouldBindJSON(&req); err != nil {
-		helper.ErrorWithDetail(c, constant.CodeErrBadRequest, constant.ErrTypeInvalidParams, err)
-		return
-	}
-	if err := global.VALID.Struct(req); err != nil {
-		helper.ErrorWithDetail(c, constant.CodeErrBadRequest, constant.ErrTypeInvalidParams, err)
+	if err := helper.CheckBindAndValidate(&req, c); err != nil {
 		return
 	}
 
@@ -131,21 +111,16 @@ func (b *BaseApi) GenerateSSH(c *gin.Context) {
 }
 
 // @Tags SSH
-// @Summary Load host ssh secret
-// @Description 获取 ssh 密钥
+// @Summary Load host SSH secret
 // @Accept json
 // @Param request body dto.GenerateLoad true "request"
-// @Success 200
+// @Success 200 {string} data
 // @Security ApiKeyAuth
+// @Security Timestamp
 // @Router /host/ssh/secret [post]
 func (b *BaseApi) LoadSSHSecret(c *gin.Context) {
 	var req dto.GenerateLoad
-	if err := c.ShouldBindJSON(&req); err != nil {
-		helper.ErrorWithDetail(c, constant.CodeErrBadRequest, constant.ErrTypeInvalidParams, err)
-		return
-	}
-	if err := global.VALID.Struct(req); err != nil {
-		helper.ErrorWithDetail(c, constant.CodeErrBadRequest, constant.ErrTypeInvalidParams, err)
+	if err := helper.CheckBindAndValidate(&req, c); err != nil {
 		return
 	}
 
@@ -158,25 +133,35 @@ func (b *BaseApi) LoadSSHSecret(c *gin.Context) {
 }
 
 // @Tags SSH
-// @Summary Load host ssh logs
-// @Description 获取 ssh 登录日志
+// @Summary Load host SSH logs
 // @Accept json
 // @Param request body dto.SearchSSHLog true "request"
 // @Success 200 {object} dto.SSHLog
 // @Security ApiKeyAuth
-// @Router /host/ssh/logs [post]
+// @Security Timestamp
+// @Router /host/ssh/log [post]
 func (b *BaseApi) LoadSSHLogs(c *gin.Context) {
 	var req dto.SearchSSHLog
-	if err := c.ShouldBindJSON(&req); err != nil {
-		helper.ErrorWithDetail(c, constant.CodeErrBadRequest, constant.ErrTypeInvalidParams, err)
-		return
-	}
-	if err := global.VALID.Struct(req); err != nil {
-		helper.ErrorWithDetail(c, constant.CodeErrBadRequest, constant.ErrTypeInvalidParams, err)
+	if err := helper.CheckBindAndValidate(&req, c); err != nil {
 		return
 	}
 
-	data, err := sshService.LoadLog(req)
+	data, err := sshService.LoadLog(c, req)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeErrInternalServer, constant.ErrTypeInternalServer, err)
+		return
+	}
+	helper.SuccessWithData(c, data)
+}
+
+// @Tags SSH
+// @Summary Load host SSH conf
+// @Success 200 {string} data
+// @Security ApiKeyAuth
+// @Security Timestamp
+// @Router /host/ssh/conf [get]
+func (b *BaseApi) LoadSSHConf(c *gin.Context) {
+	data, err := sshService.LoadSSHConf()
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeErrInternalServer, constant.ErrTypeInternalServer, err)
 		return

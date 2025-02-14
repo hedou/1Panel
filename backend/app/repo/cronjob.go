@@ -20,13 +20,16 @@ type ICronjobRepo interface {
 	Page(limit, offset int, opts ...DBOption) (int64, []model.Cronjob, error)
 	Create(cronjob *model.Cronjob) error
 	WithByJobID(id int) DBOption
-	WithByBackupID(id uint) DBOption
+	WithByDbName(name string) DBOption
+	WithByDefaultDownload(account string) DBOption
 	WithByRecordDropID(id int) DBOption
+	WithByRecordFile(file string) DBOption
 	Save(id uint, cronjob model.Cronjob) error
 	Update(id uint, vars map[string]interface{}) error
 	Delete(opts ...DBOption) error
 	DeleteRecord(opts ...DBOption) error
 	StartRecords(cronjobID uint, fromLocal bool, targetPath string) model.JobRecords
+	UpdateRecords(id uint, vars map[string]interface{}) error
 	EndRecords(record model.JobRecords, status, message, records string)
 	PageRecords(page, size int, opts ...DBOption) (int64, []model.JobRecords, error)
 }
@@ -83,7 +86,7 @@ func (u *CronjobRepo) Page(page, size int, opts ...DBOption) (int64, []model.Cro
 	}
 	count := int64(0)
 	db = db.Count(&count)
-	err := db.Order("created_at desc").Limit(size).Offset(size * (page - 1)).Find(&cronjobs).Error
+	err := db.Limit(size).Offset(size * (page - 1)).Find(&cronjobs).Error
 	return count, cronjobs, err
 }
 
@@ -115,9 +118,21 @@ func (c *CronjobRepo) WithByJobID(id int) DBOption {
 	}
 }
 
-func (c *CronjobRepo) WithByBackupID(id uint) DBOption {
+func (c *CronjobRepo) WithByDbName(name string) DBOption {
 	return func(g *gorm.DB) *gorm.DB {
-		return g.Where("target_dir_id = ?", id)
+		return g.Where("db_name = ?", name)
+	}
+}
+
+func (c *CronjobRepo) WithByDefaultDownload(account string) DBOption {
+	return func(g *gorm.DB) *gorm.DB {
+		return g.Where("default_download = ?", account)
+	}
+}
+
+func (c *CronjobRepo) WithByRecordFile(file string) DBOption {
+	return func(g *gorm.DB) *gorm.DB {
+		return g.Where("records = ?", file)
 	}
 }
 
@@ -155,6 +170,10 @@ func (u *CronjobRepo) Save(id uint, cronjob model.Cronjob) error {
 }
 func (u *CronjobRepo) Update(id uint, vars map[string]interface{}) error {
 	return global.DB.Model(&model.Cronjob{}).Where("id = ?", id).Updates(vars).Error
+}
+
+func (u *CronjobRepo) UpdateRecords(id uint, vars map[string]interface{}) error {
+	return global.DB.Model(&model.JobRecords{}).Where("id = ?", id).Updates(vars).Error
 }
 
 func (u *CronjobRepo) Delete(opts ...DBOption) error {

@@ -1,11 +1,11 @@
 <template>
     <el-dialog
-        v-model="dialogVisiable"
+        v-model="dialogVisible"
         :title="$t('commons.button.delete') + ' - ' + dbName"
         width="30%"
         :close-on-click-modal="false"
     >
-        <el-form ref="deleteForm" v-loading="loading">
+        <el-form ref="deleteForm" v-loading="loading" @submit.prevent>
             <el-form-item>
                 <el-checkbox v-model="deleteReq.forceDelete" :label="$t('app.forceDelete')" />
                 <span class="input-help">
@@ -15,7 +15,7 @@
             <el-form-item>
                 <el-checkbox v-model="deleteReq.deleteBackup" :label="$t('app.deleteBackup')" />
                 <span class="input-help">
-                    {{ $t('app.deleteBackupHelper') }}
+                    {{ $t('database.deleteBackupHelper') }}
                 </span>
             </el-form-item>
             <el-form-item>
@@ -29,7 +29,7 @@
         </el-form>
         <template #footer>
             <span class="dialog-footer">
-                <el-button @click="dialogVisiable = false" :disabled="loading">
+                <el-button @click="dialogVisible = false" :disabled="loading">
                     {{ $t('commons.button.cancel') }}
                 </el-button>
                 <el-button type="primary" @click="submit" :disabled="deleteInfo != dbName || loading">
@@ -48,10 +48,12 @@ import { MsgSuccess } from '@/utils/message';
 
 let deleteReq = ref({
     id: 0,
+    type: '',
+    database: '',
     deleteBackup: false,
     forceDelete: false,
 });
-let dialogVisiable = ref(false);
+let dialogVisible = ref(false);
 let loading = ref(false);
 let deleteInfo = ref('');
 let dbName = ref('');
@@ -60,19 +62,23 @@ const deleteForm = ref<FormInstance>();
 
 interface DialogProps {
     id: number;
+    type: string;
     name: string;
+    database: string;
 }
 const emit = defineEmits<{ (e: 'search'): void }>();
 
 const acceptParams = async (prop: DialogProps) => {
     deleteReq.value = {
         id: prop.id,
+        type: prop.type,
+        database: prop.database,
         deleteBackup: false,
         forceDelete: false,
     };
     dbName.value = prop.name;
     deleteInfo.value = '';
-    dialogVisiable.value = true;
+    dialogVisible.value = true;
 };
 
 const submit = async () => {
@@ -82,7 +88,7 @@ const submit = async () => {
             loading.value = false;
             emit('search');
             MsgSuccess(i18n.global.t('commons.msg.deleteSuccess'));
-            dialogVisiable.value = false;
+            dialogVisible.value = false;
         })
         .catch(() => {
             loading.value = false;

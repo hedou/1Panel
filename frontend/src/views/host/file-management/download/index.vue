@@ -4,6 +4,7 @@
         :title="$t('file.download')"
         :destroy-on-close="true"
         :close-on-click-modal="false"
+        :close-on-press-escape="false"
         :before-close="handleClose"
         size="40%"
     >
@@ -18,7 +19,7 @@
                             <el-option v-for="item in options" :key="item" :label="item" :value="item" />
                         </el-select>
                     </el-form-item>
-                    <el-form-item :label="$t('file.name')" prop="name">
+                    <el-form-item :label="$t('commons.table.name')" prop="name">
                         <el-input v-model="addForm.name">
                             <template #append>{{ extension }}</template>
                         </el-input>
@@ -37,7 +38,7 @@
 
 <script setup lang="ts">
 import { FormInstance, FormRules } from 'element-plus';
-import { CompressExtention, CompressType } from '@/enums/files';
+import { CompressExtension, CompressType } from '@/enums/files';
 import { computed, reactive, ref } from 'vue';
 import { DownloadFile } from '@/api/modules/files';
 import { File } from '@/api/interface/file';
@@ -76,7 +77,7 @@ let addForm = ref({
 });
 
 const extension = computed(() => {
-    return CompressExtention[addForm.value.type];
+    return CompressExtension[addForm.value.type];
 });
 
 const submit = async (formEl: FormInstance | undefined) => {

@@ -8,10 +8,13 @@ export namespace App {
         tags: Tag[];
         shortDescZh: string;
         shortDescEn: string;
+        description: string;
         author: string;
         source: string;
         type: string;
         status: string;
+        limit: number;
+        gpuSupport: boolean;
     }
 
     export interface AppDTO extends App {
@@ -22,6 +25,7 @@ export namespace App {
     export interface Tag {
         key: string;
         name: string;
+        sort: number;
     }
 
     export interface AppResPage {
@@ -41,8 +45,9 @@ export namespace App {
         readme: string;
         params: AppParams;
         dockerCompose: string;
-        enbale: boolean;
         image: string;
+        hostMode?: boolean;
+        gpuSupport: boolean;
     }
 
     export interface AppReq extends ReqPage {
@@ -56,10 +61,21 @@ export namespace App {
         formFields: FromField[];
     }
 
+    interface Locale {
+        zh: string;
+        en: string;
+        'zh-Hant': string;
+        ja: string;
+        ms: string;
+        'pt-br': string;
+        ru: string;
+    }
+
     export interface FromField {
         type: string;
         labelZh: string;
         labelEn: string;
+        label: Locale;
         required: boolean;
         default: any;
         envKey: string;
@@ -84,6 +100,7 @@ export namespace App {
     export interface ServiceParam {
         label: '';
         value: '';
+        from?: '';
     }
 
     export interface AppInstall {
@@ -96,6 +113,7 @@ export namespace App {
         tags?: string[];
         update?: boolean;
         unused?: boolean;
+        sync?: boolean;
     }
     export interface ChangePort {
         key: string;
@@ -105,7 +123,7 @@ export namespace App {
 
     export interface AppInstalled extends CommonModel {
         name: string;
-        appId: string;
+        appId: number;
         appDetailId: string;
         env: string;
         status: string;
@@ -115,6 +133,33 @@ export namespace App {
         canUpdate: boolean;
         path: string;
         app: App;
+    }
+
+    export interface AppInstallDto {
+        id: number;
+        name: string;
+        appID: number;
+        appDetailID: number;
+        version: string;
+        status: string;
+        message: string;
+        httpPort: number;
+        httpsPort: number;
+        path: string;
+        canUpdate: boolean;
+        icon: string;
+        appName: string;
+        ready: number;
+        total: number;
+        appKey: string;
+        appType: string;
+        appStatus: string;
+    }
+
+    export interface AppInstalledInfo {
+        id: number;
+        key: string;
+        name: string;
     }
 
     export interface CheckInstalled {
@@ -128,11 +173,18 @@ export namespace App {
         appInstallId: number;
         containerName: string;
         installPath: string;
+        httpPort: number;
+        httpsPort: number;
     }
 
     export interface DatabaseConnInfo {
+        status: string;
+        username: string;
         password: string;
+        privilege: boolean;
+        containerName: string;
         serviceName: string;
+        systemIP: string;
         port: number;
     }
     export interface AppInstallResource {
@@ -149,15 +201,17 @@ export namespace App {
         deleteBackup?: boolean;
     }
 
-    export interface AppInstalledSearch {
+    export interface AppInstalledSearch extends ReqPage {
         type: string;
         unused?: boolean;
+        all?: boolean;
     }
 
     export interface AppService {
         label: string;
         value: string;
         config?: Object;
+        from?: string;
     }
 
     export interface VersionDetail {
@@ -187,5 +241,18 @@ export namespace App {
         containerName: string;
         allowPort: boolean;
         dockerCompose: string;
+        hostMode?: boolean;
+    }
+
+    export interface IgnoredApp {
+        name: string;
+        detailID: number;
+        version: string;
+        icon: string;
+    }
+
+    export interface AppUpdateVersionReq {
+        appInstallID: number;
+        updateVersion?: string;
     }
 }

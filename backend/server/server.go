@@ -4,12 +4,17 @@ import (
 	"crypto/tls"
 	"encoding/gob"
 	"fmt"
+	"net"
 	"net/http"
 	"os"
-	"time"
+	"path"
+
+	"github.com/1Panel-dev/1Panel/backend/constant"
+	"github.com/1Panel-dev/1Panel/backend/i18n"
 
 	"github.com/1Panel-dev/1Panel/backend/init/app"
 	"github.com/1Panel-dev/1Panel/backend/init/business"
+	"github.com/1Panel-dev/1Panel/backend/init/lang"
 
 	"github.com/1Panel-dev/1Panel/backend/cron"
 	"github.com/1Panel-dev/1Panel/backend/init/cache"
@@ -25,44 +30,53 @@ import (
 	"github.com/1Panel-dev/1Panel/backend/init/validator"
 	"github.com/1Panel-dev/1Panel/backend/init/viper"
 
-	"github.com/fvbock/endless"
 	"github.com/gin-gonic/gin"
 )
 
 func Start() {
 	viper.Init()
+	i18n.Init()
 	log.Init()
-	app.Init()
 	db.Init()
 	migration.Init()
+	app.Init()
+	lang.Init()
 	validator.Init()
 	gob.Register(psession.SessionUser{})
 	cache.Init()
 	session.Init()
-	gin.SetMode("debug")
+	gin.SetMode(gin.DebugMode)
 	cron.Run()
+	InitOthers()
 	business.Init()
 	hook.Init()
 
 	rootRouter := router.Routers()
-	address := fmt.Sprintf(":%s", global.CONF.System.Port)
-	s := endless.NewServer(address, rootRouter)
-	s.ReadHeaderTimeout = 20 * time.Second
-	s.WriteTimeout = 60 * time.Second
-	s.MaxHeaderBytes = 1 << 20
 
-	if global.CONF.System.SSL == "disable" {
-		global.LOG.Infof("server run success on %s with http", global.CONF.System.Port)
-		if err := s.ListenAndServe(); err != nil {
-			global.LOG.Error(err)
-			panic(err)
-		}
-	} else {
-		certificate, err := os.ReadFile(global.CONF.System.BaseDir + "/1panel/secret/server.crt")
+	tcpItem := "tcp4"
+	if global.CONF.System.Ipv6 == "enable" {
+		tcpItem = "tcp"
+		global.CONF.System.BindAddress = fmt.Sprintf("[%s]", global.CONF.System.BindAddress)
+	}
+	server := &http.Server{
+		Addr:    global.CONF.System.BindAddress + ":" + global.CONF.System.Port,
+		Handler: rootRouter,
+	}
+	ln, err := net.Listen(tcpItem, server.Addr)
+	if err != nil {
+		panic(err)
+	}
+	type tcpKeepAliveListener struct {
+		*net.TCPListener
+	}
+	if global.CONF.System.SSL == "enable" {
+		certPath := path.Join(global.CONF.System.BaseDir, "1panel/secret/server.crt")
+		keyPath := path.Join(global.CONF.System.BaseDir, "1panel/secret/server.key")
+		certificate, err := os.ReadFile(certPath)
 		if err != nil {
 			panic(err)
 		}
-		key, err := os.ReadFile(global.CONF.System.BaseDir + "/1panel/secret/server.key")
+		key, err := os.ReadFile(keyPath)
 		if err != nil {
 			panic(err)
 		}
@@ -70,17 +84,21 @@ func Start() {
 		if err != nil {
 			panic(err)
 		}
-		s := &http.Server{
-			Addr:    address,
-			Handler: rootRouter,
-			TLSConfig: &tls.Config{
-				Certificates: []tls.Certificate{cert},
+		constant.CertStore.Store(&cert)
+
+		server.TLSConfig = &tls.Config{
+			GetCertificate: func(info *tls.ClientHelloInfo) (*tls.Certificate, error) {
+				return constant.CertStore.Load().(*tls.Certificate), nil
 			},
 		}
+		global.LOG.Infof("listen at https://%s:%s [%s]", global.CONF.System.BindAddress, global.CONF.System.Port, tcpItem)
 
-		global.LOG.Infof("server run success on %s with https", global.CONF.System.Port)
-		if err := s.ListenAndServeTLS("", ""); err != nil {
-			global.LOG.Error(err)
+		if err := server.ServeTLS(tcpKeepAliveListener{ln.(*net.TCPListener)}, "", ""); err != nil {
+			panic(err)
+		}
+	} else {
+		global.LOG.Infof("listen at http://%s:%s [%s]", global.CONF.System.BindAddress, global.CONF.System.Port, tcpItem)
+		if err := server.Serve(tcpKeepAliveListener{ln.(*net.TCPListener)}); err != nil {
 			panic(err)
 		}
 	}

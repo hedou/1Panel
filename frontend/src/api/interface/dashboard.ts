@@ -1,9 +1,18 @@
 export namespace Dashboard {
+    export interface OsInfo {
+        os: string;
+        platform: string;
+        platformFamily: string;
+        kernelArch: string;
+        kernelVersion: string;
+
+        diskSize: number;
+    }
     export interface BaseInfo {
         websiteNumber: number;
         databaseNumber: number;
         cronjobNumber: number;
-        appInstalldNumber: number;
+        appInstalledNumber: number;
 
         hostname: string;
         os: string;
@@ -13,6 +22,8 @@ export namespace Dashboard {
         kernelArch: string;
         kernelVersion: string;
         virtualizationSystem: string;
+        ipv4Addr: string;
+        systemProxy: string;
 
         cpuCores: number;
         cpuLogicalCores: number;
@@ -38,7 +49,11 @@ export namespace Dashboard {
         memoryTotal: number;
         memoryAvailable: number;
         memoryUsed: number;
-        MemoryUsedPercent: number;
+        memoryUsedPercent: number;
+        swapMemoryTotal: number;
+        swapMemoryAvailable: number;
+        swapMemoryUsed: number;
+        swapMemoryUsedPercent: number;
 
         ioReadBytes: number;
         ioWriteBytes: number;
@@ -47,6 +62,9 @@ export namespace Dashboard {
         ioWriteTime: number;
 
         diskData: Array<DiskInfo>;
+
+        gpuData: Array<GPUInfo>;
+        xpuData: Array<XPUInfo>;
 
         netBytesSent: number;
         netBytesRecv: number;
@@ -66,5 +84,31 @@ export namespace Dashboard {
         inodesUsed: number;
         inodesFree: number;
         inodesUsedPercent: number;
+    }
+    export interface GPUInfo {
+        index: number;
+        productName: string;
+        gpuUtil: string;
+        temperature: string;
+        performanceState: string;
+        powerUsage: string;
+        memoryUsage: string;
+        fanSpeed: string;
+    }
+
+    export interface XPUInfo {
+        deviceID: number;
+        deviceName: string;
+        memory: string;
+        temperature: string;
+        memoryUsed: string;
+        power: string;
+        memoryUtil: string;
+    }
+
+    export interface DashboardReq {
+        scope: string;
+        ioOption: string;
+        netOption: string;
     }
 }

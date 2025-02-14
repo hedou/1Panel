@@ -4,32 +4,20 @@
 
 <script lang="ts" setup>
 import { ref, watch, onBeforeUnmount, nextTick } from 'vue';
-import { Terminal } from 'xterm';
-import 'xterm/css/xterm.css';
-import { FitAddon } from 'xterm-addon-fit';
+import { Terminal } from '@xterm/xterm';
+import '@xterm/xterm/css/xterm.css';
+import { FitAddon } from '@xterm/addon-fit';
 import { Base64 } from 'js-base64';
 
 const terminalElement = ref<HTMLDivElement | null>(null);
 const fitAddon = new FitAddon();
 const termReady = ref(false);
 const webSocketReady = ref(false);
-const term = ref(
-    new Terminal({
-        lineHeight: 1.2,
-        fontSize: 12,
-        fontFamily: "Monaco, Menlo, Consolas, 'Courier New', monospace",
-        theme: {
-            background: '#000000',
-        },
-        cursorBlink: true,
-        cursorStyle: 'underline',
-        scrollback: 100,
-        tabStopWidth: 4,
-    }),
-);
+const term = ref();
 const terminalSocket = ref<WebSocket>();
-const heartbeatTimer = ref<number>();
+const heartbeatTimer = ref<NodeJS.Timer>();
 const latency = ref(0);
+const initCmd = ref('');
 
 const readyWatcher = watch(
     () => webSocketReady.value && termReady.value,
@@ -45,14 +33,33 @@ interface WsProps {
     endpoint: string;
     args: string;
     error: string;
+    initCmd: string;
 }
 const acceptParams = (props: WsProps) => {
     nextTick(() => {
         if (props.error.length !== 0) {
             initError(props.error);
         } else {
+            initCmd.value = props.initCmd || '';
             init(props.endpoint, props.args);
         }
+    });
+};
+
+const newTerm = () => {
+    const background = getComputedStyle(document.documentElement).getPropertyValue('--panel-terminal-bg-color').trim();
+    term.value = new Terminal({
+        lineHeight: 1.2,
+        fontSize: 12,
+        fontFamily: "Monaco, Menlo, Consolas, 'Courier New', monospace",
+        theme: {
+            background: background,
+        },
+        cursorBlink: true,
+        cursorStyle: 'underline',
+        scrollback: 1000,
+        scrollSensitivity: 15,
+        tabStopWidth: 4,
     });
 };
 
@@ -78,11 +85,13 @@ function onClose(isKeepShow: boolean = false) {
             term.value.dispose();
         } catch {}
     }
+    terminalElement.value.innerHTML = '';
 }
 
 // terminal 相关代码 start
 
 const initTerminal = (online: boolean = false): boolean => {
+    newTerm();
     if (terminalElement.value) {
         term.value.open(terminalElement.value);
         term.value.loadAddon(fitAddon);
@@ -124,6 +133,7 @@ const onTermWheel = (event: WheelEvent) => {
         } else {
             term.value.options.fontSize = term.value.options.fontSize + 1;
         }
+        changeTerminalSize();
     }
 };
 
@@ -157,6 +167,9 @@ const initWebSocket = (endpoint_: string, args: string = '') => {
 
 const runRealTerminal = () => {
     webSocketReady.value = true;
+    if (initCmd.value !== '') {
+        sendMsg(initCmd.value);
+    }
 };
 
 const onWSReceive = (message: MessageEvent) => {
@@ -164,7 +177,14 @@ const onWSReceive = (message: MessageEvent) => {
     switch (wsMsg.type) {
         case 'cmd': {
             term.value.element && term.value.focus();
-            wsMsg.data && term.value.write(Base64.decode(wsMsg.data)); // 这里理论上不用判断，但是Redis和Ctr还没实现Alive处理，所以exit后会一直发数据，todo
+            if (wsMsg.data) {
+                let receiveMsg = Base64.decode(wsMsg.data);
+                if (initCmd.value != '') {
+                    receiveMsg = receiveMsg?.replace(initCmd.value.trim(), '').trim();
+                    initCmd.value = '';
+                }
+                term.value.write(receiveMsg);
+            }
             break;
         }
         case 'heartbeat': {
@@ -184,6 +204,7 @@ const closeRealTerminal = (ev: CloseEvent) => {
     if (heartbeatTimer.value) {
         clearInterval(heartbeatTimer.value);
     }
+    term.value.write('The connection has been disconnected.');
     term.value.write(ev.reason);
 };
 
@@ -222,5 +243,8 @@ onBeforeUnmount(() => {
 #terminal {
     width: 100%;
     height: 100%;
+}
+:deep(.xterm) {
+    padding: 5px !important;
 }
 </style>

@@ -15,4 +15,6 @@ var (
 	LocalAppInstallDir   = path.Join(AppInstallDir, "local")
 	RemoteAppResourceDir = path.Join(AppResourceDir, "remote")
 	RuntimeDir           = path.Join(DataDir, "runtime")
+	RecycleBinDir        = "/.1panel_clash"
+	SSLLogDir            = path.Join(global.CONF.System.DataDir, "log", "ssl")
 )

@@ -1,5 +1,11 @@
 <template>
-    <el-drawer v-model="drawerVisiable" :destroy-on-close="true" :close-on-click-modal="false" size="30%">
+    <el-drawer
+        v-model="drawerVisible"
+        :destroy-on-close="true"
+        :close-on-click-modal="false"
+        :close-on-press-escape="false"
+        size="30%"
+    >
         <template #header>
             <DrawerHeader :header="$t('container.createVolume')" :back="handleClose" />
         </template>
@@ -12,8 +18,9 @@
                     :model="form"
                     :rules="rules"
                     label-width="80px"
+                    @submit.prevent
                 >
-                    <el-form-item :label="$t('container.volumeName')" prop="name">
+                    <el-form-item :label="$t('commons.table.name')" prop="name">
                         <el-input clearable v-model.trim="form.name" />
                     </el-form-item>
                     <el-form-item :label="$t('container.driver')" prop="driver">
@@ -27,13 +34,13 @@
                             <el-input
                                 clearable
                                 v-model.trim="form.nfsAddress"
-                                :placeholder="$t('container.nfsAddressHelper')"
+                                :placeholder="$t('commons.rule.hostHelper')"
                             />
                         </el-form-item>
                         <el-form-item :label="$t('container.version')" prop="nfsVersion">
                             <el-radio-group v-model="form.nfsVersion">
-                                <el-radio label="v3">NFS</el-radio>
-                                <el-radio label="v4">NFS4</el-radio>
+                                <el-radio value="v3">NFS</el-radio>
+                                <el-radio value="v4">NFS4</el-radio>
                             </el-radio-group>
                         </el-form-item>
                         <el-form-item :label="$t('container.mountpoint')" prop="nfsMount">
@@ -51,7 +58,7 @@
                         <el-input
                             type="textarea"
                             :placeholder="$t('container.tagHelper')"
-                            :autosize="{ minRows: 2, maxRows: 4 }"
+                            :rows="3"
                             v-model="form.optionStr"
                         />
                     </el-form-item>
@@ -59,7 +66,7 @@
                         <el-input
                             type="textarea"
                             :placeholder="$t('container.tagHelper')"
-                            :autosize="{ minRows: 2, maxRows: 4 }"
+                            :rows="3"
                             v-model="form.labelStr"
                         />
                     </el-form-item>
@@ -68,7 +75,7 @@
         </el-row>
         <template #footer>
             <span class="dialog-footer">
-                <el-button :disabled="loading" @click="drawerVisiable = false">
+                <el-button :disabled="loading" @click="drawerVisible = false">
                     {{ $t('commons.button.cancel') }}
                 </el-button>
                 <el-button :disabled="loading" type="primary" @click="onSubmit(formRef)">
@@ -90,7 +97,7 @@ import { MsgSuccess } from '@/utils/message';
 
 const loading = ref(false);
 
-const drawerVisiable = ref(false);
+const drawerVisible = ref(false);
 const form = reactive({
     name: '',
     driver: 'local',
@@ -116,12 +123,12 @@ const acceptParams = (): void => {
     form.nfsVersion = 'v4';
     form.nfsMount = '';
     form.nfsOption = 'rw,noatime,rsize=8192,wsize=8192,tcp,timeo=14';
-    drawerVisiable.value = true;
+    drawerVisible.value = true;
 };
 const emit = defineEmits<{ (e: 'search'): void }>();
 
 const handleClose = () => {
-    drawerVisiable.value = false;
+    drawerVisible.value = false;
 };
 
 const rules = reactive({
@@ -158,7 +165,7 @@ const onSubmit = async (formEl: FormInstance | undefined) => {
                 loading.value = false;
                 MsgSuccess(i18n.global.t('commons.msg.operationSuccess'));
                 emit('search');
-                drawerVisiable.value = false;
+                drawerVisible.value = false;
             })
             .catch(() => {
                 loading.value = false;

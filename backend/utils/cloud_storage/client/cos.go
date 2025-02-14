@@ -5,37 +5,25 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"os"
 
-	"github.com/1Panel-dev/1Panel/backend/constant"
 	cosSDK "github.com/tencentyun/cos-go-sdk-v5"
 )
 
 type cosClient struct {
-	region    string
-	accessKey string
-	secretKey string
-	Vars      map[string]interface{}
-	client    *cosSDK.Client
+	scType           string
+	client           *cosSDK.Client
+	clientWithBucket *cosSDK.Client
 }
 
 func NewCosClient(vars map[string]interface{}) (*cosClient, error) {
-	var accessKey string
-	var secretKey string
-	var region string
-	if _, ok := vars["region"]; ok {
-		region = vars["region"].(string)
-	} else {
-		return nil, constant.ErrInvalidParams
-	}
-	if _, ok := vars["accessKey"]; ok {
-		accessKey = vars["accessKey"].(string)
-	} else {
-		return nil, constant.ErrInvalidParams
-	}
-	if _, ok := vars["secretKey"]; ok {
-		secretKey = vars["secretKey"].(string)
-	} else {
-		return nil, constant.ErrInvalidParams
+	region := loadParamFromVars("region", vars)
+	accessKey := loadParamFromVars("accessKey", vars)
+	secretKey := loadParamFromVars("secretKey", vars)
+	bucket := loadParamFromVars("bucket", vars)
+	scType := loadParamFromVars("scType", vars)
+	if len(scType) == 0 {
+		scType = "Standard"
 	}
 
 	u, _ := url.Parse(fmt.Sprintf("https://cos.%s.myqcloud.com", region))
@@ -47,11 +35,23 @@ func NewCosClient(vars map[string]interface{}) (*cosClient, error) {
 		},
 	})
 
-	return &cosClient{Vars: vars, client: client, accessKey: accessKey, secretKey: secretKey, region: region}, nil
+	if len(bucket) != 0 {
+		u2, _ := url.Parse(fmt.Sprintf("https://%s.cos.%s.myqcloud.com", bucket, region))
+		b2 := &cosSDK.BaseURL{BucketURL: u2}
+		clientWithBucket := cosSDK.NewClient(b2, &http.Client{
+			Transport: &cosSDK.AuthorizationTransport{
+				SecretID:  accessKey,
+				SecretKey: secretKey,
+			},
+		})
+		return &cosClient{client: client, clientWithBucket: clientWithBucket, scType: scType}, nil
+	}
+
+	return &cosClient{client: client, clientWithBucket: nil, scType: scType}, nil
 }
 
-func (cos cosClient) ListBuckets() ([]interface{}, error) {
-	buckets, _, err := cos.client.Service.Get(context.Background())
+func (c cosClient) ListBuckets() ([]interface{}, error) {
+	buckets, _, err := c.client.Service.Get(context.Background())
 	if err != nil {
 		return nil, err
 	}
@@ -62,88 +62,81 @@ func (cos cosClient) ListBuckets() ([]interface{}, error) {
 	return datas, nil
 }
 
-func (cos cosClient) Exist(path string) (bool, error) {
-	client, err := cos.newClientWithBucket()
-	if err != nil {
-		return false, err
-	}
-	exist, err := client.Object.IsExist(context.Background(), path)
+func (c cosClient) Exist(path string) (bool, error) {
+	exist, err := c.clientWithBucket.Object.IsExist(context.Background(), path)
 	if err != nil {
 		return false, err
 	}
 	return exist, nil
 }
 
-func (cos cosClient) Delete(path string) (bool, error) {
-	client, err := cos.newClientWithBucket()
+func (c cosClient) Size(path string) (int64, error) {
+	data, _, err := c.clientWithBucket.Bucket.Get(context.Background(), &cosSDK.BucketGetOptions{Prefix: path})
 	if err != nil {
-		return false, err
+		return 0, err
 	}
-	if _, err := client.Object.Delete(context.Background(), path); err != nil {
+	if len(data.Contents) == 0 {
+		return 0, fmt.Errorf("no such file %s", path)
+	}
+	return data.Contents[0].Size, nil
+}
+
+func (c cosClient) Delete(path string) (bool, error) {
+	if _, err := c.clientWithBucket.Object.Delete(context.Background(), path); err != nil {
 		return false, err
 	}
 	return true, nil
 }
 
-func (cos cosClient) Upload(src, target string) (bool, error) {
-	client, err := cos.newClientWithBucket()
+func (c cosClient) Upload(src, target string) (bool, error) {
+	fileInfo, err := os.Stat(src)
 	if err != nil {
 		return false, err
 	}
-	if _, err := client.Object.PutFromFile(context.Background(), target, src, &cosSDK.ObjectPutOptions{}); err != nil {
+	if fileInfo.Size() > 5368709120 {
+		opt := &cosSDK.MultiUploadOptions{
+			OptIni: &cosSDK.InitiateMultipartUploadOptions{
+				ACLHeaderOptions: nil,
+				ObjectPutHeaderOptions: &cosSDK.ObjectPutHeaderOptions{
+					XCosStorageClass: c.scType,
+				},
+			},
+			PartSize: 200,
+		}
+		if _, _, err := c.clientWithBucket.Object.MultiUpload(
+			context.Background(), target, src, opt,
+		); err != nil {
+			return false, err
+		}
+		return true, nil
+	}
+	if _, err := c.clientWithBucket.Object.PutFromFile(context.Background(), target, src, &cosSDK.ObjectPutOptions{
+		ACLHeaderOptions: nil,
+		ObjectPutHeaderOptions: &cosSDK.ObjectPutHeaderOptions{
+			XCosStorageClass: c.scType,
+		},
+	}); err != nil {
 		return false, err
 	}
 	return true, nil
 }
 
-func (cos cosClient) Download(src, target string) (bool, error) {
-	client, err := cos.newClientWithBucket()
-	if err != nil {
-		return false, err
-	}
-	if _, err := client.Object.Download(context.Background(), src, target, &cosSDK.MultiDownloadOptions{}); err != nil {
+func (c cosClient) Download(src, target string) (bool, error) {
+	if _, err := c.clientWithBucket.Object.Download(context.Background(), src, target, &cosSDK.MultiDownloadOptions{}); err != nil {
 		return false, err
 	}
 	return true, nil
 }
 
-func (cos *cosClient) GetBucket() (string, error) {
-	if _, ok := cos.Vars["bucket"]; ok {
-		return cos.Vars["bucket"].(string), nil
-	} else {
-		return "", constant.ErrInvalidParams
-	}
-}
-
-func (cos cosClient) ListObjects(prefix string) ([]interface{}, error) {
-	client, err := cos.newClientWithBucket()
+func (c cosClient) ListObjects(prefix string) ([]string, error) {
+	datas, _, err := c.clientWithBucket.Bucket.Get(context.Background(), &cosSDK.BucketGetOptions{Prefix: prefix})
 	if err != nil {
 		return nil, err
 	}
-	datas, _, err := client.Bucket.Get(context.Background(), &cosSDK.BucketGetOptions{Prefix: prefix})
-	if err != nil {
-		return nil, err
-	}
 
-	var result []interface{}
+	var result []string
 	for _, item := range datas.Contents {
 		result = append(result, item.Key)
 	}
 	return result, nil
-}
-
-func (cos cosClient) newClientWithBucket() (*cosSDK.Client, error) {
-	bucket, err := cos.GetBucket()
-	if err != nil {
-		return nil, err
-	}
-	u, _ := url.Parse(fmt.Sprintf("https://%s.cos.%s.myqcloud.com", bucket, cos.region))
-	b := &cosSDK.BaseURL{BucketURL: u}
-	client := cosSDK.NewClient(b, &http.Client{
-		Transport: &cosSDK.AuthorizationTransport{
-			SecretID:  cos.accessKey,
-			SecretKey: cos.secretKey,
-		},
-	})
-	return client, nil
 }

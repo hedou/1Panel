@@ -1,6 +1,7 @@
 import http from '@/api';
 import { ResPage } from '../interface';
 import { App } from '../interface/app';
+import { TimeoutEnum } from '@/enums/http-enum';
 
 export const SyncApp = () => {
     return http.post<any>('apps/sync', {});
@@ -39,19 +40,23 @@ export const ChangePort = (params: App.ChangePort) => {
 };
 
 export const SearchAppInstalled = (search: App.AppInstallSearch) => {
-    return http.post<ResPage<App.AppInstalled>>('apps/installed/search', search);
+    return http.post<ResPage<App.AppInstallDto>>('apps/installed/search', search);
 };
 
-export const GetAppPort = (key: string) => {
-    return http.get<number>(`apps/installed/loadport/${key}`);
+export const ListAppInstalled = () => {
+    return http.get<Array<App.AppInstalledInfo>>('apps/installed/list');
 };
 
-export const GetAppConnInfo = (key: string) => {
-    return http.get<App.DatabaseConnInfo>(`apps/installed/conninfo/${key}`);
+export const GetAppPort = (type: string, name: string) => {
+    return http.post<number>(`apps/installed/loadport`, { type: type, name: name });
 };
 
-export const CheckAppInstalled = (key: string) => {
-    return http.get<App.CheckInstalled>(`apps/installed/check/${key}`);
+export const GetAppConnInfo = (type: string, name: string) => {
+    return http.post<App.DatabaseConnInfo>(`apps/installed/conninfo`, { type: type, name: name });
+};
+
+export const CheckAppInstalled = (key: string, name: string) => {
+    return http.post<App.CheckInstalled>(`apps/installed/check`, { key: key, name: name });
 };
 
 export const AppInstalledDeleteCheck = (appInstallId: number) => {
@@ -59,11 +64,11 @@ export const AppInstalledDeleteCheck = (appInstallId: number) => {
 };
 
 export const GetAppInstalled = (search: App.AppInstalledSearch) => {
-    return http.post<App.AppInstalled[]>('apps/installed/search', search);
+    return http.post<ResPage<App.AppInstalled>>('apps/installed/search', search);
 };
 
 export const InstalledOp = (op: App.AppInstalledOp) => {
-    return http.post<any>('apps/installed/op', op, 40000);
+    return http.post<any>('apps/installed/op', op, TimeoutEnum.T_40S);
 };
 
 export const SyncInstalledApp = () => {
@@ -74,12 +79,12 @@ export const GetAppService = (key: string | undefined) => {
     return http.get<App.AppService[]>(`apps/services/${key}`);
 };
 
-export const GetAppUpdateVersions = (id: number) => {
-    return http.get<any>(`apps/installed/${id}/versions`);
+export const GetAppUpdateVersions = (req: App.AppUpdateVersionReq) => {
+    return http.post<any>(`apps/installed/update/versions`, req);
 };
 
-export const GetAppDefaultConfig = (key: string) => {
-    return http.get<string>(`apps/installed/conf/${key}`);
+export const GetAppDefaultConfig = (key: string, name: string) => {
+    return http.post<string>(`apps/installed/conf`, { type: key, name: name });
 };
 
 export const GetAppInstallParams = (id: number) => {
@@ -88,4 +93,12 @@ export const GetAppInstallParams = (id: number) => {
 
 export const UpdateAppInstallParams = (req: any) => {
     return http.post<any>(`apps/installed/params/update`, req);
+};
+
+export const IgnoreUpgrade = (req: any) => {
+    return http.post<any>(`apps/installed/ignore`, req);
+};
+
+export const GetIgnoredApp = () => {
+    return http.get<App.IgnoredApp>(`apps/ignored/detail`);
 };

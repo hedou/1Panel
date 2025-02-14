@@ -5,19 +5,6 @@ type Config struct {
 	FilePath string
 }
 
-func (c *Config) FindDirectives(directiveName string) []IDirective {
-	return c.Block.FindDirectives(directiveName)
-}
-
-func (c *Config) FindUpstreams() []*Upstream {
-	var upstreams []*Upstream
-	directives := c.Block.FindDirectives("upstream")
-	for _, directive := range directives {
-		upstreams = append(upstreams, directive.(*Upstream))
-	}
-	return upstreams
-}
-
 func (c *Config) FindServers() []*Server {
 	var servers []*Server
 	directives := c.Block.FindDirectives("server")
@@ -47,6 +34,8 @@ var repeatKeys = map[string]struct {
 	"location":         {},
 	"include":          {},
 	"sub_filter":       {},
+	"add_header":       {},
+	"error_page":       {},
 }
 
 func IsRepeatKey(key string) bool {

@@ -1,5 +1,5 @@
 <template>
-    <el-drawer v-model="open" size="40%">
+    <el-drawer v-model="open" size="40%" :close-on-click-modal="false" :close-on-press-escape="false">
         <template #header>
             <DrawerHeader :header="$t('file.rename')" :resource="oldName" :back="handleClose" />
         </template>
@@ -16,7 +16,7 @@
                     <el-form-item :label="$t('file.path')" prop="path">
                         <el-input v-model="addForm.path" disabled />
                     </el-form-item>
-                    <el-form-item :label="$t('file.name')" prop="newName">
+                    <el-form-item :label="$t('commons.table.name')" prop="newName">
                         <el-input v-model.trim="addForm.newName" />
                     </el-form-item>
                 </el-form>

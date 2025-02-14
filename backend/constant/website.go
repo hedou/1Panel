@@ -4,10 +4,6 @@ const (
 	WebRunning = "Running"
 	WebStopped = "Stopped"
 
-	DateLayout     = "2006-01-02"
-	DateTimeLayout = "2006-01-02 15:04:05"
-	DefaultDate    = "1970-01-01"
-
 	ProtocolHTTP  = "HTTP"
 	ProtocolHTTPS = "HTTPS"
 
@@ -27,6 +23,7 @@ const (
 	DnsManual  = "dnsManual"
 	Http       = "http"
 	Manual     = "manual"
+	SelfSigned = "selfSigned"
 
 	StartWeb = "start"
 	StopWeb  = "stop"
@@ -45,4 +42,10 @@ const (
 
 	ConfigPHP = "php"
 	ConfigFPM = "fpm"
+
+	SSLInit       = "init"
+	SSLError      = "error"
+	SSLReady      = "ready"
+	SSLApply      = "applying"
+	SSLApplyError = "applyError"
 )

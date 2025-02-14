@@ -1,22 +1,41 @@
 <template>
-    <div class="footer flx-justify-between">
-        <div class="footer-left">
-            <a href="https://fit2cloud.com/" target="_blank">Copyright © 2014-2023 FIT2CLOUD 飞致云</a>
-        </div>
-        <div class="footer-right">
-            <SystemUpgrade :footer="true" />
+    <div class="footer" :style="{ height: mobile ? '108px' : '48px' }">
+        <div class="flex w-full flex-col gap-4 md:justify-between md:flex-row">
+            <div class="flex flex-wrap gap-4">
+                <a v-if="!globalStore.isIntl" href="https://fit2cloud.com/" target="_blank">
+                    Copyright © 2014-{{ year }} {{ $t('commons.fit2cloud') }}
+                </a>
+                <a v-if="globalStore.isIntl" href="https://1panel.hk/" target="_blank">
+                    Copyright © {{ year }} {{ $t('commons.lingxia') }}
+                </a>
+            </div>
+            <div class="flex flex-row gap-2 md:flex-col lg:flex-row">
+                <SystemUpgrade :footer="true" />
+            </div>
         </div>
     </div>
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue';
 import SystemUpgrade from '@/components/system-upgrade/index.vue';
+import { GlobalStore } from '@/store';
+
+const globalStore = GlobalStore();
+const mobile = computed(() => {
+    return globalStore.isMobile();
+});
+const year = new Date().getFullYear();
 </script>
 
 <style scoped lang="scss">
 .footer {
-    background: #ffffff;
-    border-top: 1px solid #e4e7ed;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 48px;
+    background: var(--panel-footer-bg);
+    border-top: 1px solid var(--panel-footer-border);
     box-sizing: border-box;
     padding: 10px 20px;
     a {

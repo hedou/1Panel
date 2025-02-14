@@ -1,16 +1,22 @@
 package dto
 
-import "time"
+import (
+	"time"
+)
 
 type PageContainer struct {
 	PageInfo
-	Name    string `json:"name"`
-	Filters string `json:"filters"`
+	Name            string `json:"name"`
+	State           string `json:"state" validate:"required,oneof=all created running paused restarting removing exited dead"`
+	OrderBy         string `json:"orderBy" validate:"required,oneof=name state created_at"`
+	Order           string `json:"order" validate:"required,oneof=null ascending descending"`
+	Filters         string `json:"filters"`
+	ExcludeAppStore bool   `json:"excludeAppStore"`
 }
 
 type InspectReq struct {
-	ID   string `json:"id"`
-	Type string `json:"type"`
+	ID   string `json:"id" validate:"required"`
+	Type string `json:"type" validate:"required"`
 }
 
 type ContainerInfo struct {
@@ -22,22 +28,40 @@ type ContainerInfo struct {
 	State       string `json:"state"`
 	RunTime     string `json:"runTime"`
 
-	CPUPercent    float64  `json:"cpuPercent"`
-	MemoryPercent float64  `json:"memoryPercent"`
-	Ports         []string `json:"ports"`
+	Network []string `json:"network"`
+	Ports   []string `json:"ports"`
 
 	IsFromApp     bool `json:"isFromApp"`
 	IsFromCompose bool `json:"isFromCompose"`
+
+	AppName        string   `json:"appName"`
+	AppInstallName string   `json:"appInstallName"`
+	Websites       []string `json:"websites"`
 }
 
-type ContainerCreate struct {
-	Name            string         `json:"name"`
-	Image           string         `json:"image"`
+type ResourceLimit struct {
+	CPU    int    `json:"cpu"`
+	Memory uint64 `json:"memory"`
+}
+
+type ContainerOperate struct {
+	ContainerID     string         `json:"containerID"`
+	ForcePull       bool           `json:"forcePull"`
+	Name            string         `json:"name" validate:"required"`
+	Image           string         `json:"image" validate:"required"`
+	Network         string         `json:"network"`
+	Ipv4            string         `json:"ipv4"`
+	Ipv6            string         `json:"ipv6"`
 	PublishAllPorts bool           `json:"publishAllPorts"`
 	ExposedPorts    []PortHelper   `json:"exposedPorts"`
+	Tty             bool           `json:"tty"`
+	OpenStdin       bool           `json:"openStdin"`
 	Cmd             []string       `json:"cmd"`
-	NanoCPUs        int64          `json:"nanoCPUs"`
-	Memory          int64          `json:"memory"`
+	Entrypoint      []string       `json:"entrypoint"`
+	CPUShares       int64          `json:"cpuShares"`
+	NanoCPUs        float64        `json:"nanoCPUs"`
+	Memory          float64        `json:"memory"`
+	Privileged      bool           `json:"privileged"`
 	AutoRemove      bool           `json:"autoRemove"`
 	Volumes         []VolumeHelper `json:"volumes"`
 	Labels          []string       `json:"labels"`
@@ -45,7 +69,27 @@ type ContainerCreate struct {
 	RestartPolicy   string         `json:"restartPolicy"`
 }
 
-type ContainterStats struct {
+type ContainerUpgrade struct {
+	Name      string `json:"name" validate:"required"`
+	Image     string `json:"image" validate:"required"`
+	ForcePull bool   `json:"forcePull"`
+}
+
+type ContainerListStats struct {
+	ContainerID string `json:"containerID"`
+
+	CPUTotalUsage uint64  `json:"cpuTotalUsage"`
+	SystemUsage   uint64  `json:"systemUsage"`
+	CPUPercent    float64 `json:"cpuPercent"`
+	PercpuUsage   int     `json:"percpuUsage"`
+
+	MemoryCache   uint64  `json:"memoryCache"`
+	MemoryUsage   uint64  `json:"memoryUsage"`
+	MemoryLimit   uint64  `json:"memoryLimit"`
+	MemoryPercent float64 `json:"memoryPercent"`
+}
+
+type ContainerStats struct {
 	CPUPercent float64 `json:"cpuPercent"`
 	Memory     float64 `json:"memory"`
 	Cache      float64 `json:"cache"`
@@ -58,6 +102,7 @@ type ContainterStats struct {
 }
 
 type VolumeHelper struct {
+	Type         string `json:"type"`
 	SourceDir    string `json:"sourceDir"`
 	ContainerDir string `json:"containerDir"`
 	Mode         string `json:"mode"`
@@ -69,20 +114,28 @@ type PortHelper struct {
 	Protocol      string `json:"protocol"`
 }
 
-type ContainerLog struct {
-	ContainerID string `json:"containerID" validate:"required"`
-	Mode        string `json:"mode" validate:"required"`
+type ContainerOperation struct {
+	Names     []string `json:"names" validate:"required"`
+	Operation string   `json:"operation" validate:"required,oneof=up start stop restart kill pause unpause remove"`
 }
 
-type ContainerOperation struct {
-	Name      string `json:"name" validate:"required"`
-	Operation string `json:"operation" validate:"required,oneof=start stop restart kill pause unpause rename remove"`
-	NewName   string `json:"newName"`
+type ContainerRename struct {
+	Name    string `json:"name" validate:"required"`
+	NewName string `json:"newName" validate:"required"`
+}
+
+type ContainerCommit struct {
+	ContainerId   string `json:"containerID" validate:"required"`
+	ContainerName string `json:"containerName"`
+	NewImageName  string `json:"newImageName"`
+	Comment       string `json:"comment"`
+	Author        string `json:"author"`
+	Pause         bool   `json:"pause"`
 }
 
 type ContainerPrune struct {
-	PruneType  string `json:"pruneType" validate:"required,oneof=container image volume network"`
-	WithTagAll bool   `josn:"withTagAll"`
+	PruneType  string `json:"pruneType" validate:"required,oneof=container image volume network buildcache"`
+	WithTagAll bool   `json:"withTagAll"`
 }
 
 type ContainerPruneReport struct {
@@ -102,13 +155,21 @@ type Network struct {
 	Attachable bool      `json:"attachable"`
 }
 type NetworkCreate struct {
-	Name    string   `json:"name"`
-	Driver  string   `json:"driver"`
-	Options []string `json:"options"`
-	Subnet  string   `json:"subnet"`
-	Gateway string   `json:"gateway"`
-	IPRange string   `json:"ipRange"`
-	Labels  []string `json:"labels"`
+	Name       string          `json:"name" validate:"required"`
+	Driver     string          `json:"driver" validate:"required"`
+	Options    []string        `json:"options"`
+	Ipv4       bool            `json:"ipv4"`
+	Subnet     string          `json:"subnet"`
+	Gateway    string          `json:"gateway"`
+	IPRange    string          `json:"ipRange"`
+	AuxAddress []SettingUpdate `json:"auxAddress"`
+
+	Ipv6         bool            `json:"ipv6"`
+	SubnetV6     string          `json:"subnetV6"`
+	GatewayV6    string          `json:"gatewayV6"`
+	IPRangeV6    string          `json:"ipRangeV6"`
+	AuxAddressV6 []SettingUpdate `json:"auxAddressV6"`
+	Labels       []string        `json:"labels"`
 }
 
 type Volume struct {
@@ -119,13 +180,14 @@ type Volume struct {
 	CreatedAt  time.Time `json:"createdAt"`
 }
 type VolumeCreate struct {
-	Name    string   `json:"name"`
-	Driver  string   `json:"driver"`
+	Name    string   `json:"name" validate:"required"`
+	Driver  string   `json:"driver" validate:"required"`
 	Options []string `json:"options"`
 	Labels  []string `json:"labels"`
 }
 
 type BatchDelete struct {
+	Force bool     `json:"force"`
 	Names []string `json:"names" validate:"required"`
 }
 
@@ -138,6 +200,7 @@ type ComposeInfo struct {
 	Workdir         string             `json:"workdir"`
 	Path            string             `json:"path"`
 	Containers      []ComposeContainer `json:"containers"`
+	Env             []string           `json:"env"`
 }
 type ComposeContainer struct {
 	ContainerID string `json:"containerID"`
@@ -146,20 +209,29 @@ type ComposeContainer struct {
 	State       string `json:"state"`
 }
 type ComposeCreate struct {
-	Name     string `json:"name"`
-	From     string `json:"from" validate:"required,oneof=edit path template"`
-	File     string `json:"file"`
-	Path     string `json:"path"`
-	Template uint   `json:"template"`
+	Name     string   `json:"name"`
+	From     string   `json:"from" validate:"required,oneof=edit path template"`
+	File     string   `json:"file"`
+	Path     string   `json:"path"`
+	Template uint     `json:"template"`
+	Env      []string `json:"env"`
 }
 type ComposeOperation struct {
 	Name      string `json:"name" validate:"required"`
-	Path      string `json:"path" validate:"required"`
-	Operation string `json:"operation" validate:"required,oneof=start stop down"`
+	Path      string `json:"path"`
+	Operation string `json:"operation" validate:"required,oneof=up start stop down delete"`
 	WithFile  bool   `json:"withFile"`
 }
 type ComposeUpdate struct {
-	Name    string `json:"name" validate:"required"`
-	Path    string `json:"path" validate:"required"`
-	Content string `json:"content" validate:"required"`
+	Name    string   `json:"name" validate:"required"`
+	Path    string   `json:"path" validate:"required"`
+	Content string   `json:"content" validate:"required"`
+	Env     []string `json:"env"`
+}
+
+type ContainerLog struct {
+	Container     string `json:"container" validate:"required"`
+	Since         string `json:"since"`
+	Tail          uint   `json:"tail"`
+	ContainerType string `json:"containerType"`
 }

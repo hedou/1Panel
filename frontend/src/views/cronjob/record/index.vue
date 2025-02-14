@@ -1,72 +1,40 @@
 <template>
     <div v-if="recordShow" v-loading="loading">
-        <div class="a-card" style="margin-top: 20px">
+        <div class="app-status p-mt-20">
             <el-card>
-                <div>
-                    <el-popover
-                        v-if="dialogData.rowData.name.length >= 15"
-                        placement="top-start"
-                        trigger="hover"
-                        width="250"
-                        :content="$t('cronjob.' + dialogData.rowData.type) + ' - ' + dialogData.rowData.name"
-                    >
-                        <template #reference>
-                            <el-tag style="float: left" effect="dark" type="success">
-                                {{ $t('cronjob.' + dialogData.rowData.type) }} -
-                                {{ dialogData.rowData.name.substring(0, 12) }}...
-                            </el-tag>
-                        </template>
-                    </el-popover>
-                    <el-tag v-if="dialogData.rowData.name.length < 15" style="float: left" effect="dark" type="success">
-                        {{ $t('cronjob.' + dialogData.rowData.type) }} - {{ dialogData.rowData.name }}
-                    </el-tag>
-
-                    <el-tag v-if="dialogData.rowData.status === 'Enable'" round class="status-content" type="success">
-                        {{ $t('commons.status.running') }}
-                    </el-tag>
-                    <el-tag v-if="dialogData.rowData.status === 'Disable'" round class="status-content" type="info">
-                        {{ $t('commons.status.stopped') }}
-                    </el-tag>
-                    <el-tag class="status-content">
-                        <span
-                            v-if="
-                                dialogData.rowData?.specType.indexOf('N') === -1 ||
-                                dialogData.rowData?.specType === 'perWeek'
-                            "
+                <div class="flex w-full flex-col gap-4 md:flex-row">
+                    <div class="flex flex-wrap gap-4">
+                        <el-popover
+                            v-if="dialogData.rowData.name.length >= 15"
+                            placement="top-start"
+                            trigger="hover"
+                            width="250"
+                            :content="$t('cronjob.' + dialogData.rowData.type) + ' - ' + dialogData.rowData.name"
                         >
-                            {{ $t('cronjob.' + dialogData.rowData?.specType) }}&nbsp;
-                        </span>
-                        <span v-else>{{ $t('cronjob.per') }}</span>
-                        <span v-if="dialogData.rowData?.specType === 'perMonth'">
-                            {{ dialogData.rowData?.day }}{{ $t('cronjob.day') }}&nbsp;
-                            {{ loadZero(dialogData.rowData?.hour) }} :
-                            {{ loadZero(dialogData.rowData?.minute) }}
-                        </span>
-                        <span v-if="dialogData.rowData?.specType === 'perWeek'">
-                            {{ loadWeek(dialogData.rowData?.week) }}&nbsp; {{ loadZero(dialogData.rowData?.hour) }} :
-                            {{ loadZero(dialogData.rowData?.minute) }}
-                        </span>
-                        <span v-if="dialogData.rowData?.specType === 'perNDay'">
-                            {{ dialogData.rowData?.day }}{{ $t('cronjob.day1') }},&nbsp;
-                            {{ loadZero(dialogData.rowData?.hour) }} :
-                            {{ loadZero(dialogData.rowData?.minute) }}
-                        </span>
-                        <span v-if="dialogData.rowData?.specType === 'perNHour'">
-                            {{ dialogData.rowData?.hour }}{{ $t('cronjob.hour') }},&nbsp;
-                            {{ loadZero(dialogData.rowData?.minute) }}
-                        </span>
-                        <span v-if="dialogData.rowData?.specType === 'perHour'">
-                            &nbsp;{{ loadZero(dialogData.rowData?.minute) }}
-                        </span>
-                        <span v-if="dialogData.rowData?.specType === 'perNMinute'">
-                            &nbsp;{{ dialogData.rowData?.minute }}{{ $t('cronjob.minute') }}
-                        </span>
-                        <span v-if="dialogData.rowData?.specType === 'perNSecond'">
-                            &nbsp;{{ dialogData.rowData?.second }}{{ $t('cronjob.second') }}
-                        </span>
-                        &nbsp;{{ $t('cronjob.handle') }}
-                    </el-tag>
-                    <span class="buttons">
+                            <template #reference>
+                                <el-tag style="float: left" effect="dark" type="success">
+                                    {{ $t('cronjob.' + dialogData.rowData.type) }} -
+                                    {{ dialogData.rowData.name.substring(0, 12) }}...
+                                </el-tag>
+                            </template>
+                        </el-popover>
+                        <el-tag
+                            v-if="dialogData.rowData.name.length < 15"
+                            class="float-left"
+                            effect="dark"
+                            type="success"
+                        >
+                            {{ $t('cronjob.' + dialogData.rowData.type) }} - {{ dialogData.rowData.name }}
+                        </el-tag>
+
+                        <el-tag v-if="dialogData.rowData.status === 'Enable'" round type="success">
+                            {{ $t('commons.status.running') }}
+                        </el-tag>
+                        <el-tag v-if="dialogData.rowData.status === 'Disable'" round type="info">
+                            {{ $t('commons.status.stopped') }}
+                        </el-tag>
+                    </div>
+                    <div class="mt-0.5">
                         <el-button type="primary" @click="onHandle(dialogData.rowData)" link>
                             {{ $t('commons.button.handle') }}
                         </el-button>
@@ -91,7 +59,7 @@
                         <el-button :disabled="!hasRecords" type="primary" @click="onClean" link>
                             {{ $t('commons.button.clean') }}
                         </el-button>
-                    </span>
+                    </div>
                 </div>
             </el-card>
         </div>
@@ -112,7 +80,7 @@
                         ></el-date-picker>
                     </el-col>
                     <el-col :span="16">
-                        <el-select @change="search()" v-model="searchInfo.status">
+                        <el-select @change="search()" v-model="searchInfo.status" class="p-w-200">
                             <template #prefix>{{ $t('commons.table.status') }}</template>
                             <el-option :label="$t('commons.table.all')" value="" />
                             <el-option :label="$t('commons.status.success')" value="Success" />
@@ -123,194 +91,118 @@
                 </el-row>
             </template>
             <template #main>
-                <el-row :gutter="20" v-show="hasRecords">
-                    <el-col :span="8">
-                        <div>
-                            <ul class="infinite-list" style="overflow: auto">
-                                <li
-                                    v-for="(item, index) in records"
-                                    :key="index"
-                                    @click="forDetail(item)"
-                                    class="infinite-list-item"
+                <div class="mainClass">
+                    <el-row :gutter="20" v-show="hasRecords" class="mainRowClass">
+                        <el-col :span="7">
+                            <div class="infinite-list" style="overflow: auto">
+                                <el-table
+                                    style="cursor: pointer"
+                                    :data="records"
+                                    border
+                                    :show-header="false"
+                                    @row-click="forDetail"
                                 >
-                                    <el-icon v-if="item.status === 'Success'"><Select /></el-icon>
-                                    <el-icon v-if="item.status === 'Waiting'"><Loading /></el-icon>
-                                    <el-icon v-if="item.status === 'Failed'"><CloseBold /></el-icon>
-                                    <span v-if="item.id === currentRecord.id" style="color: red">
-                                        {{ dateFormat(0, 0, item.startTime) }}
-                                    </span>
-                                    <span v-else>{{ dateFormat(0, 0, item.startTime) }}</span>
-                                </li>
-                            </ul>
-                            <div style="margin-top: 10px; font-size: 12px; float: right">
+                                    <el-table-column>
+                                        <template #default="{ row }">
+                                            <span v-if="row.id === currentRecord.id" class="select-sign"></span>
+                                            <el-tag v-if="row.status === 'Success'" type="success">
+                                                {{ $t('commons.status.success') }}
+                                            </el-tag>
+                                            <el-tag v-if="row.status === 'Waiting'" type="info">
+                                                {{ $t('commons.status.waiting') }}
+                                            </el-tag>
+                                            <el-tag v-if="row.status === 'Failed'" type="danger">
+                                                {{ $t('commons.status.failed') }}
+                                            </el-tag>
+                                            <span>
+                                                {{ row.startTime }}
+                                            </span>
+                                        </template>
+                                    </el-table-column>
+                                </el-table>
+                            </div>
+                            <div class="page-item">
                                 <el-pagination
                                     :page-size="searchInfo.pageSize"
                                     :current-page="searchInfo.page"
                                     @current-change="handleCurrentChange"
                                     @size-change="handleSizeChange"
-                                    :pager-count="5"
+                                    :pager-count="3"
                                     :page-sizes="[6, 8, 10, 12, 14]"
                                     small
                                     layout="total, sizes, prev, pager, next"
                                     :total="searchInfo.recordTotal"
                                 />
                             </div>
-                        </div>
-                    </el-col>
-                    <el-col :span="16">
-                        <el-form label-position="top" :v-key="refresh">
-                            <el-row type="flex" justify="center">
-                                <el-form-item class="descriptionWide" v-if="isBackup()">
-                                    <template #label>
-                                        <span class="status-label">{{ $t('cronjob.target') }}</span>
-                                    </template>
-                                    <span class="status-count">{{ dialogData.rowData!.targetDir }}</span>
-                                    <el-button
-                                        v-if="currentRecord?.status === 'Success'"
-                                        type="primary"
-                                        style="margin-left: 10px"
-                                        link
-                                        icon="Download"
-                                        @click="onDownload(currentRecord, dialogData.rowData!.targetDirID)"
-                                    >
-                                        {{ $t('file.download') }}
-                                    </el-button>
-                                </el-form-item>
-                                <el-form-item class="description" v-if="dialogData.rowData!.type === 'website'">
-                                    <template #label>
-                                        <span class="status-label">{{ $t('cronjob.website') }}</span>
-                                    </template>
-                                    <span v-if="dialogData.rowData!.website !== 'all'" class="status-count">
-                                        {{ dialogData.rowData!.website }}
-                                    </span>
-                                    <span v-else class="status-count">
-                                        {{ $t('commons.table.all') }}
-                                    </span>
-                                </el-form-item>
-                                <el-form-item class="description" v-if="dialogData.rowData!.type === 'database'">
-                                    <template #label>
-                                        <span class="status-label">{{ $t('cronjob.database') }}</span>
-                                    </template>
-                                    <span v-if="dialogData.rowData!.dbName !== 'all'" class="status-count">
-                                        {{ dialogData.rowData!.dbName }}
-                                    </span>
-                                    <span v-else class="status-count">
-                                        {{ $t('commons.table.all') }}
-                                    </span>
-                                </el-form-item>
-                                <el-form-item class="description" v-if="dialogData.rowData!.type === 'directory'">
-                                    <template #label>
-                                        <span class="status-label">{{ $t('cronjob.directory') }}</span>
-                                    </template>
-                                    <span v-if="dialogData.rowData!.sourceDir.length <= 12" class="status-count">
-                                        {{ dialogData.rowData!.sourceDir }}
-                                    </span>
-                                    <div v-else>
-                                        <el-popover
-                                            placement="top-start"
-                                            trigger="hover"
-                                            width="250"
-                                            :content="dialogData.rowData!.sourceDir"
-                                        >
-                                            <template #reference>
-                                                <span class="status-count">
-                                                    {{ dialogData.rowData!.sourceDir.substring(0, 12) }}...
-                                                </span>
-                                            </template>
-                                        </el-popover>
-                                    </div>
-                                </el-form-item>
-                                <el-form-item class="description" v-if="isBackup()">
-                                    <template #label>
-                                        <span class="status-label">{{ $t('cronjob.retainCopies') }}</span>
-                                    </template>
-                                    <span class="status-count">{{ dialogData.rowData!.retainCopies }}</span>
-                                </el-form-item>
-                            </el-row>
-                            <el-form-item
-                                class="description"
-                                v-if="dialogData.rowData!.type === 'website' || dialogData.rowData!.type === 'directory'"
-                            >
-                                <template #label>
-                                    <span class="status-label">{{ $t('cronjob.exclusionRules') }}</span>
-                                </template>
-                                <span v-if="dialogData.rowData!.exclusionRules.length <= 12" class="status-count">
-                                    {{ dialogData.rowData!.exclusionRules }}
-                                </span>
-                                <div v-else>
-                                    <el-popover
-                                        placement="top-start"
-                                        trigger="hover"
-                                        width="250"
-                                        :content="dialogData.rowData!.exclusionRules"
-                                    >
-                                        <template #reference>
-                                            <span class="status-count">
-                                                {{ dialogData.rowData!.exclusionRules.substring(0, 12) }}...
-                                            </span>
+                        </el-col>
+                        <el-col :span="17">
+                            <el-form label-position="top" :v-key="refresh">
+                                <el-row type="flex" justify="center">
+                                    <el-form-item class="descriptionWide">
+                                        <template #label>
+                                            <span class="status-label">{{ $t('commons.search.timeStart') }}</span>
                                         </template>
-                                    </el-popover>
-                                </div>
-                            </el-form-item>
-                            <el-row type="flex" justify="center">
-                                <el-form-item class="descriptionWide">
-                                    <template #label>
-                                        <span class="status-label">{{ $t('commons.search.timeStart') }}</span>
-                                    </template>
-                                    <span class="status-count">{{ dateFormat(0, 0, currentRecord?.startTime) }}</span>
-                                </el-form-item>
-                                <el-form-item class="description">
-                                    <template #label>
-                                        <span class="status-label">{{ $t('commons.table.interval') }}</span>
-                                    </template>
-                                    <span class="status-count" v-if="currentRecord?.interval! <= 1000">
-                                        {{ currentRecord?.interval }} ms
-                                    </span>
-                                    <span class="status-count" v-if="currentRecord?.interval! > 1000">
-                                        {{ currentRecord?.interval! / 1000 }} s
-                                    </span>
-                                </el-form-item>
-                                <el-form-item class="description">
-                                    <template #label>
-                                        <span class="status-label">{{ $t('commons.table.status') }}</span>
-                                    </template>
-                                    <el-tooltip v-if="currentRecord?.status === 'Failed'" placement="top">
-                                        <template #content>
-                                            <div style="width: 300px; word-break: break-all">
-                                                {{ currentRecord?.message }}
-                                            </div>
+                                        <span class="status-count">
+                                            {{ dateFormat(0, 0, currentRecord?.startTime) }}
+                                        </span>
+                                    </el-form-item>
+                                    <el-form-item class="description">
+                                        <template #label>
+                                            <span class="status-label">{{ $t('commons.table.interval') }}</span>
                                         </template>
-                                        <el-tag type="danger">{{ $t('commons.table.statusFailed') }}</el-tag>
-                                    </el-tooltip>
-                                    <el-tag type="success" v-if="currentRecord?.status === 'Success'">
-                                        {{ $t('commons.table.statusSuccess') }}
-                                    </el-tag>
-                                    <el-tag type="info" v-if="currentRecord?.status === 'Waiting'">
-                                        {{ $t('commons.table.statusWaiting') }}
-                                    </el-tag>
-                                </el-form-item>
-                            </el-row>
-                            <el-row v-if="currentRecord?.records">
-                                <span>{{ $t('commons.table.records') }}</span>
-                                <codemirror
-                                    ref="mymirror"
-                                    :autofocus="true"
-                                    :placeholder="$t('cronjob.noLogs')"
-                                    :indent-with-tab="true"
-                                    :tabSize="4"
-                                    style="height: calc(100vh - 484px); width: 100%; margin-top: 5px"
-                                    :lineWrapping="true"
-                                    :matchBrackets="true"
-                                    theme="cobalt"
-                                    :styleActiveLine="true"
-                                    :extensions="extensions"
-                                    v-model="currentRecordDetail"
-                                    :disabled="true"
-                                />
-                            </el-row>
-                        </el-form>
-                    </el-col>
-                </el-row>
+                                        <span class="status-count" v-if="currentRecord?.interval! <= 1000">
+                                            {{ currentRecord?.interval }} ms
+                                        </span>
+                                        <span class="status-count" v-if="currentRecord?.interval! > 1000">
+                                            {{ currentRecord?.interval! / 1000 }} s
+                                        </span>
+                                    </el-form-item>
+                                    <el-form-item class="description">
+                                        <template #label>
+                                            <span class="status-label">{{ $t('commons.table.status') }}</span>
+                                        </template>
+                                        <el-tag type="danger" v-if="currentRecord?.status === 'Failed'">
+                                            {{ $t('commons.table.statusFailed') }}
+                                        </el-tag>
+                                        <el-tag type="success" v-if="currentRecord?.status === 'Success'">
+                                            {{ $t('commons.table.statusSuccess') }}
+                                        </el-tag>
+                                        <el-tag type="info" v-if="currentRecord?.status === 'Waiting'">
+                                            {{ $t('commons.table.statusWaiting') }}
+                                        </el-tag>
+                                    </el-form-item>
+                                </el-row>
+                                <el-row v-if="currentRecord?.status === 'Failed'">
+                                    <el-form-item class="w-full">
+                                        <template #label>
+                                            <span class="status-label">{{ $t('commons.table.message') }}</span>
+                                        </template>
+                                        {{ currentRecord?.message }}
+                                    </el-form-item>
+                                </el-row>
+                                <el-row v-if="currentRecord?.records">
+                                    <span>{{ $t('commons.table.records') }}</span>
+                                    <codemirror
+                                        ref="mymirror"
+                                        :autofocus="true"
+                                        :placeholder="$t('cronjob.noLogs')"
+                                        :indent-with-tab="true"
+                                        :tabSize="4"
+                                        style="height: calc(100vh - 488px); width: 100%; margin-top: 5px"
+                                        :lineWrapping="true"
+                                        :matchBrackets="true"
+                                        theme="cobalt"
+                                        :styleActiveLine="true"
+                                        :extensions="extensions"
+                                        @ready="handleReady"
+                                        v-model="currentRecordDetail"
+                                        :disabled="true"
+                                    />
+                                </el-row>
+                            </el-form>
+                        </el-col>
+                    </el-row>
+                </div>
                 <div class="app-warn" v-show="!hasRecords">
                     <div>
                         <span>{{ $t('cronjob.noRecord') }}</span>
@@ -323,7 +215,7 @@
         </LayoutContent>
 
         <el-dialog
-            v-model="deleteVisiable"
+            v-model="deleteVisible"
             :title="$t('commons.button.clean')"
             width="30%"
             :close-on-click-modal="false"
@@ -338,7 +230,7 @@
             </el-form>
             <template #footer>
                 <span class="dialog-footer">
-                    <el-button @click="deleteVisiable = false" :disabled="delLoading">
+                    <el-button @click="deleteVisible = false" :disabled="delLoading">
                         {{ $t('commons.button.cancel') }}
                     </el-button>
                     <el-button type="primary" @click="cleanRecord">
@@ -351,18 +243,19 @@
 </template>
 
 <script lang="ts" setup>
-import { onBeforeUnmount, reactive, ref } from 'vue';
+import { nextTick, onBeforeUnmount, reactive, ref, shallowRef } from 'vue';
 import { Cronjob } from '@/api/interface/cronjob';
-import { loadZero } from '@/utils/util';
-import { searchRecords, download, handleOnce, updateStatus, cleanRecords } from '@/api/modules/cronjob';
+import { searchRecords, handleOnce, updateStatus, cleanRecords, getRecordLog } from '@/api/modules/cronjob';
 import { dateFormat } from '@/utils/util';
 import i18n from '@/lang';
 import { ElMessageBox } from 'element-plus';
-import { DownloadByPath, LoadFile } from '@/api/modules/files';
 import { Codemirror } from 'vue-codemirror';
 import { javascript } from '@codemirror/lang-javascript';
 import { oneDark } from '@codemirror/theme-one-dark';
-import { MsgError, MsgInfo, MsgSuccess } from '@/utils/message';
+import { MsgSuccess } from '@/utils/message';
+import { listDbItems } from '@/api/modules/database';
+import { ListAppInstalled } from '@/api/modules/app';
+import { shortcuts } from '@/utils/shortcuts';
 
 const loading = ref();
 const refresh = ref(false);
@@ -372,6 +265,10 @@ let timer: NodeJS.Timer | null = null;
 
 const mymirror = ref();
 const extensions = [javascript(), oneDark];
+const view = shallowRef();
+const handleReady = (payload) => {
+    view.value = payload.view;
+};
 
 interface DialogProps {
     rowData: Cronjob.CronjobInfo;
@@ -382,13 +279,38 @@ const records = ref<Array<Cronjob.Record>>([]);
 const currentRecord = ref<Cronjob.Record>();
 const currentRecordDetail = ref<string>('');
 
-const deleteVisiable = ref();
+const deleteVisible = ref();
 const delLoading = ref();
 const cleanData = ref();
 
 const acceptParams = async (params: DialogProps): Promise<void> => {
+    let itemSize = Number(localStorage.getItem(searchInfo.cacheSizeKey));
+    if (itemSize) {
+        searchInfo.pageSize = itemSize;
+    }
+
     recordShow.value = true;
     dialogData.value = params;
+    if (dialogData.value.rowData.type === 'database') {
+        const data = await listDbItems('mysql,mariadb,postgresql');
+        let itemDBs = data.data || [];
+        for (const item of itemDBs) {
+            if (item.id == dialogData.value.rowData.dbName) {
+                dialogData.value.rowData.dbName = item.database + ' [' + item.name + ']';
+                break;
+            }
+        }
+    }
+    if (dialogData.value.rowData.type === 'app') {
+        const res = await ListAppInstalled();
+        let itemApps = res.data || [];
+        for (const item of itemApps) {
+            if (item.id == dialogData.value.rowData.appID) {
+                dialogData.value.rowData.appID = item.key + ' [' + item.name + ']';
+                break;
+            }
+        }
+    }
     search();
     timer = setInterval(() => {
         search();
@@ -397,6 +319,7 @@ const acceptParams = async (params: DialogProps): Promise<void> => {
 
 const handleSizeChange = (val: number) => {
     searchInfo.pageSize = val;
+    localStorage.setItem(searchInfo.cacheSizeKey, val + '');
     search();
 };
 const handleCurrentChange = (val: number) => {
@@ -404,66 +327,12 @@ const handleCurrentChange = (val: number) => {
     search();
 };
 
-const shortcuts = [
-    {
-        text: i18n.global.t('monitor.today'),
-        value: () => {
-            const end = new Date(new Date().setHours(23, 59, 59, 999));
-            const start = new Date(new Date().setHours(0, 0, 0, 0));
-            return [start, end];
-        },
-    },
-    {
-        text: i18n.global.t('monitor.yesterday'),
-        value: () => {
-            const itemDate = new Date(new Date().getTime() - 3600 * 1000 * 24 * 1);
-            const end = new Date(itemDate.setHours(23, 59, 59, 999));
-            const start = new Date(itemDate.setHours(0, 0, 0, 0));
-            return [start, end];
-        },
-    },
-    {
-        text: i18n.global.t('monitor.lastNDay', [3]),
-        value: () => {
-            const itemDate = new Date(new Date().getTime() - 3600 * 1000 * 24 * 3);
-            const end = new Date(new Date().setHours(23, 59, 59, 999));
-            const start = new Date(itemDate.setHours(0, 0, 0, 0));
-            return [start, end];
-        },
-    },
-    {
-        text: i18n.global.t('monitor.lastNDay', [7]),
-        value: () => {
-            const itemDate = new Date(new Date().getTime() - 3600 * 1000 * 24 * 7);
-            const end = new Date(new Date().setHours(23, 59, 59, 999));
-            const start = new Date(itemDate.setHours(0, 0, 0, 0));
-            return [start, end];
-        },
-    },
-    {
-        text: i18n.global.t('monitor.lastNDay', [30]),
-        value: () => {
-            const itemDate = new Date(new Date().getTime() - 3600 * 1000 * 24 * 30);
-            const end = new Date(new Date().setHours(23, 59, 59, 999));
-            const start = new Date(itemDate.setHours(0, 0, 0, 0));
-            return [start, end];
-        },
-    },
-];
-const weekOptions = [
-    { label: i18n.global.t('cronjob.monday'), value: 1 },
-    { label: i18n.global.t('cronjob.tuesday'), value: 2 },
-    { label: i18n.global.t('cronjob.wednesday'), value: 3 },
-    { label: i18n.global.t('cronjob.thursday'), value: 4 },
-    { label: i18n.global.t('cronjob.friday'), value: 5 },
-    { label: i18n.global.t('cronjob.saturday'), value: 6 },
-    { label: i18n.global.t('cronjob.sunday'), value: 7 },
-];
 const timeRangeLoad = ref<[Date, Date]>([
     new Date(new Date(new Date().getTime() - 3600 * 1000 * 24 * 7).setHours(0, 0, 0, 0)),
     new Date(new Date().setHours(23, 59, 59, 999)),
 ]);
 const searchInfo = reactive({
+    cacheSizeKey: 'cronjob-record-page-size',
     page: 1,
     pageSize: 8,
     recordTotal: 0,
@@ -524,11 +393,16 @@ const search = async () => {
     if (!currentRecord.value) {
         currentRecord.value = records.value[0];
     } else {
+        let beDelete = true;
         for (const item of records.value) {
             if (item.id === currentRecord.value.id) {
+                beDelete = false;
                 currentRecord.value = item;
                 break;
             }
+        }
+        if (beDelete) {
+            currentRecord.value = records.value[0];
         }
     }
     if (currentRecord.value?.records) {
@@ -536,73 +410,44 @@ const search = async () => {
     }
 };
 
-const onDownload = async (record: any, backupID: number) => {
-    if (dialogData.value.rowData.dbName === 'all') {
-        MsgInfo(i18n.global.t('cronjob.allOptionHelper', [i18n.global.t('database.database')]));
-        return;
-    }
-    if (dialogData.value.rowData.website === 'all') {
-        MsgInfo(i18n.global.t('cronjob.allOptionHelper', [i18n.global.t('website.website')]));
-        return;
-    }
-    if (!record.file || record.file.indexOf('/') === -1) {
-        MsgError(i18n.global.t('cronjob.errPath', [record.file]));
-        return;
-    }
-    let params = {
-        recordID: record.id,
-        backupAccountID: backupID,
-    };
-    await download(params).then(async (res) => {
-        const file = await DownloadByPath(res.data);
-        const downloadUrl = window.URL.createObjectURL(new Blob([file]));
-        const a = document.createElement('a');
-        a.style.display = 'none';
-        a.href = downloadUrl;
-        if (record.file && record.file.indexOf('/') !== -1) {
-            let pathItem = record.file.split('/');
-            a.download = pathItem[pathItem.length - 1];
-        }
-        const event = new MouseEvent('click');
-        a.dispatchEvent(event);
-    });
-};
-
 const forDetail = async (row: Cronjob.Record) => {
     currentRecord.value = row;
     loadRecord(row);
 };
 const loadRecord = async (row: Cronjob.Record) => {
-    if (row.status === 'Failed') {
-        currentRecordDetail.value = row.records;
-        return;
-    }
     if (row.records) {
-        const res = await LoadFile({ path: row.records });
-        currentRecordDetail.value = res.data;
+        const res = await getRecordLog(row.id);
+        let log = res.data.replace(/\x1B\[[0-?]*[ -/]*[@-~]/g, '');
+        if (currentRecordDetail.value === log) {
+            return;
+        }
+        currentRecordDetail.value = log;
+        nextTick(() => {
+            const state = view.value.state;
+            view.value.dispatch({
+                selection: { anchor: state.doc.length, head: state.doc.length },
+                scrollIntoView: true,
+            });
+        });
     }
 };
 
 const onClean = async () => {
-    if (!isBackup()) {
-        ElMessageBox.confirm(i18n.global.t('commons.msg.clean'), i18n.global.t('commons.msg.deleteTitle'), {
-            confirmButtonText: i18n.global.t('commons.button.confirm'),
-            cancelButtonText: i18n.global.t('commons.button.cancel'),
-            type: 'warning',
-        }).then(async () => {
-            await cleanRecords(dialogData.value.rowData.id, cleanData.value)
-                .then(() => {
-                    delLoading.value = false;
-                    MsgSuccess(i18n.global.t('commons.msg.operationSuccess'));
-                    search();
-                })
-                .catch(() => {
-                    delLoading.value = false;
-                });
-        });
-    } else {
-        deleteVisiable.value = true;
-    }
+    ElMessageBox.confirm(i18n.global.t('commons.msg.clean'), i18n.global.t('commons.msg.deleteTitle'), {
+        confirmButtonText: i18n.global.t('commons.button.confirm'),
+        cancelButtonText: i18n.global.t('commons.button.cancel'),
+        type: 'warning',
+    }).then(async () => {
+        await cleanRecords(dialogData.value.rowData.id, cleanData.value)
+            .then(() => {
+                delLoading.value = false;
+                MsgSuccess(i18n.global.t('commons.msg.operationSuccess'));
+                search();
+            })
+            .catch(() => {
+                delLoading.value = false;
+            });
+    });
 };
 
 const cleanRecord = async () => {
@@ -610,7 +455,7 @@ const cleanRecord = async () => {
     await cleanRecords(dialogData.value.rowData.id, cleanData.value)
         .then(() => {
             delLoading.value = false;
-            deleteVisiable.value = false;
+            deleteVisible.value = false;
             MsgSuccess(i18n.global.t('commons.msg.operationSuccess'));
             search();
         })
@@ -618,22 +463,6 @@ const cleanRecord = async () => {
             delLoading.value = false;
         });
 };
-
-function isBackup() {
-    return (
-        dialogData.value.rowData!.type === 'website' ||
-        dialogData.value.rowData!.type === 'database' ||
-        dialogData.value.rowData!.type === 'directory'
-    );
-}
-function loadWeek(i: number) {
-    for (const week of weekOptions) {
-        if (week.value === i) {
-            return week.label;
-        }
-    }
-    return '';
-}
 
 onBeforeUnmount(() => {
     clearInterval(Number(timer));
@@ -647,69 +476,43 @@ defineExpose({
 
 <style lang="scss" scoped>
 .infinite-list {
-    height: calc(100vh - 435px);
-    padding: 0;
-    margin: 0;
-}
-.infinite-list .infinite-list-item {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    height: 30px;
-    background: var(--el-color-primary-light-9);
-    margin: 10px;
-    color: var(--el-color-primary);
-    cursor: pointer;
-    &:hover {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        height: 30px;
-        background: var(--el-color-primary-light-9);
-        margin: 10px;
-        font-weight: 500;
-        color: red;
-    }
-}
-.a-card {
-    font-size: 17px;
-    .el-card {
-        --el-card-padding: 12px;
-        .buttons {
-            margin-left: 100px;
+    height: calc(100vh - 420px);
+    .select-sign {
+        &::before {
+            float: left;
+            margin-left: -3px;
+            position: relative;
+            width: 3px;
+            height: 24px;
+            content: '';
+            background: $primary-color;
+            border-radius: 20px;
         }
     }
-}
-.status-content {
-    float: left;
-    margin-left: 50px;
-}
-
-.app-warn {
-    text-align: center;
-    margin-top: 100px;
-    span:first-child {
-        color: #bbbfc4;
-    }
-
-    span:nth-child(2) {
-        color: $primary-color;
-        cursor: pointer;
-    }
-
-    span:nth-child(2):hover {
-        color: #74a4f3;
-    }
-
-    img {
-        width: 300px;
-        height: 300px;
+    .el-tag {
+        margin-left: 20px;
+        margin-right: 20px;
     }
 }
+
 .descriptionWide {
     width: 40%;
 }
 .description {
     width: 30%;
+}
+.page-item {
+    margin-top: 10px;
+    font-size: 12px;
+    float: right;
+}
+
+@media only screen and (max-width: 1400px) {
+    .mainClass {
+        overflow: auto;
+    }
+    .mainRowClass {
+        min-width: 1200px;
+    }
 }
 </style>

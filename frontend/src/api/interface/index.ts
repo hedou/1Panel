@@ -22,6 +22,9 @@ export interface SearchWithPage {
     info: string;
     page: number;
     pageSize: number;
+    orderBy?: string;
+    order?: string;
+    name?: string;
 }
 export interface CommonModel {
     id: number;
@@ -31,4 +34,7 @@ export interface CommonModel {
 export interface DescriptionUpdate {
     id: number;
     description: string;
+}
+export interface UpdateByFile {
+    file: string;
 }

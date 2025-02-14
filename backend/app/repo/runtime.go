@@ -2,7 +2,9 @@ package repo
 
 import (
 	"context"
+
 	"github.com/1Panel-dev/1Panel/backend/app/model"
+	"github.com/1Panel-dev/1Panel/backend/global"
 	"gorm.io/gorm"
 )
 
@@ -15,11 +17,13 @@ type IRuntimeRepo interface {
 	WithNotId(id uint) DBOption
 	WithStatus(status string) DBOption
 	WithDetailId(id uint) DBOption
+	WithPort(port int) DBOption
 	Page(page, size int, opts ...DBOption) (int64, []model.Runtime, error)
 	Create(ctx context.Context, runtime *model.Runtime) error
 	Save(runtime *model.Runtime) error
 	DeleteBy(opts ...DBOption) error
 	GetFirst(opts ...DBOption) (*model.Runtime, error)
+	List(opts ...DBOption) ([]model.Runtime, error)
 }
 
 func NewIRunTimeRepo() IRuntimeRepo {
@@ -56,6 +60,12 @@ func (r *RuntimeRepo) WithNotId(id uint) DBOption {
 	}
 }
 
+func (r *RuntimeRepo) WithPort(port int) DBOption {
+	return func(g *gorm.DB) *gorm.DB {
+		return g.Where("port = ?", port)
+	}
+}
+
 func (r *RuntimeRepo) Page(page, size int, opts ...DBOption) (int64, []model.Runtime, error) {
 	var runtimes []model.Runtime
 	db := getDb(opts...).Model(&model.Runtime{})
@@ -63,6 +73,16 @@ func (r *RuntimeRepo) Page(page, size int, opts ...DBOption) (int64, []model.Run
 	db = db.Count(&count)
 	err := db.Limit(size).Offset(size * (page - 1)).Find(&runtimes).Error
 	return count, runtimes, err
+}
+
+func (r *RuntimeRepo) List(opts ...DBOption) ([]model.Runtime, error) {
+	var runtimes []model.Runtime
+	db := global.DB.Model(&model.Runtime{})
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	err := db.Find(&runtimes).Error
+	return runtimes, err
 }
 
 func (r *RuntimeRepo) Create(ctx context.Context, runtime *model.Runtime) error {

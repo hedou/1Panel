@@ -1,7 +1,7 @@
 <template>
     <el-tabs tab-position="left" v-model="tabIndex">
         <el-tab-pane :label="$t('website.domainConfig')">
-            <Doamin :key="id" :id="id" v-if="tabIndex == '0' && id > 0"></Doamin>
+            <Domain :key="id" :id="id" v-if="tabIndex == '0' && id > 0"></Domain>
         </el-tab-pane>
         <el-tab-pane :label="$t('website.sitePath')">
             <SitePath :id="id" v-if="tabIndex == '1'"></SitePath>
@@ -27,16 +27,19 @@
         <el-tab-pane :label="$t('website.antiLeech')">
             <AntiLeech :id="id" v-if="tabIndex == '8'"></AntiLeech>
         </el-tab-pane>
+        <el-tab-pane :label="$t('website.redirect')">
+            <Redirect :id="id" v-if="tabIndex == '9'"></Redirect>
+        </el-tab-pane>
         <el-tab-pane :label="$t('website.other')">
-            <Other :id="id" v-if="tabIndex == '9'"></Other>
+            <Other :id="id" v-if="tabIndex == '10'"></Other>
         </el-tab-pane>
     </el-tabs>
 </template>
 
 <script lang="ts" setup name="Basic">
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 
-import Doamin from './domain/index.vue';
+import Domain from './domain/index.vue';
 import Default from './default-doc/index.vue';
 import LimitConn from './limit-conn/index.vue';
 import Other from './other/index.vue';
@@ -46,6 +49,7 @@ import Rewrite from './rewrite/index.vue';
 import Proxy from './proxy/index.vue';
 import AuthBasic from './auth-basic/index.vue';
 import AntiLeech from './anti-Leech/index.vue';
+import Redirect from './redirect/index.vue';
 
 const props = defineProps({
     id: {
@@ -58,5 +62,14 @@ const id = computed(() => {
 });
 const tabIndex = ref('0');
 
-onMounted(() => {});
+watch(tabIndex, (newVal) => {
+    localStorage.setItem('site-tabIndex', newVal);
+});
+
+onMounted(() => {
+    const storedTabIndex = localStorage.getItem('site-tabIndex');
+    if (storedTabIndex !== null) {
+        tabIndex.value = storedTabIndex;
+    }
+});
 </script>

@@ -7,6 +7,7 @@ import (
 	"github.com/1Panel-dev/1Panel/backend/app/dto"
 	"github.com/1Panel-dev/1Panel/backend/app/model"
 	"github.com/1Panel-dev/1Panel/backend/constant"
+	"github.com/1Panel-dev/1Panel/backend/utils/encrypt"
 	"github.com/1Panel-dev/1Panel/backend/utils/ssh"
 	"github.com/jinzhu/copier"
 	"github.com/pkg/errors"
@@ -23,6 +24,8 @@ type IHostService interface {
 	Create(hostDto dto.HostOperate) (*dto.HostInfo, error)
 	Update(id uint, upMap map[string]interface{}) error
 	Delete(id []uint) error
+
+	EncryptHost(itemVal string) (string, error)
 }
 
 func NewIHostService() IHostService {
@@ -89,8 +92,25 @@ func (u *HostService) TestLocalConn(id uint) bool {
 	if err := copier.Copy(&connInfo, &host); err != nil {
 		return false
 	}
-	connInfo.PrivateKey = []byte(host.PrivateKey)
+	if len(host.Password) != 0 {
+		host.Password, err = encrypt.StringDecrypt(host.Password)
+		if err != nil {
+			return false
+		}
+		connInfo.Password = host.Password
+	}
+	if len(host.PrivateKey) != 0 {
+		host.PrivateKey, err = encrypt.StringDecrypt(host.PrivateKey)
+		if err != nil {
+			return false
+		}
+		connInfo.PrivateKey = []byte(host.PrivateKey)
+	}
 	if len(host.PassPhrase) != 0 {
+		host.PassPhrase, err = encrypt.StringDecrypt(host.PassPhrase)
+		if err != nil {
+			return false
+		}
 		connInfo.PassPhrase = []byte(host.PassPhrase)
 	}
 	client, err := connInfo.NewClient()
@@ -106,6 +126,25 @@ func (u *HostService) GetHostInfo(id uint) (*model.Host, error) {
 	host, err := hostRepo.Get(commonRepo.WithByID(id))
 	if err != nil {
 		return nil, constant.ErrRecordNotFound
+	}
+	if len(host.Password) != 0 {
+		host.Password, err = encrypt.StringDecrypt(host.Password)
+		if err != nil {
+			return nil, err
+		}
+	}
+	if len(host.PrivateKey) != 0 {
+		host.PrivateKey, err = encrypt.StringDecrypt(host.PrivateKey)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if len(host.PassPhrase) != 0 {
+		host.PassPhrase, err = encrypt.StringDecrypt(host.PassPhrase)
+		if err != nil {
+			return nil, err
+		}
 	}
 	return &host, err
 }
@@ -127,6 +166,25 @@ func (u *HostService) SearchWithPage(search dto.SearchHostWithPage) (int64, inte
 			item.Password = ""
 			item.PrivateKey = ""
 			item.PassPhrase = ""
+		} else {
+			if len(host.Password) != 0 {
+				item.Password, err = encrypt.StringDecrypt(host.Password)
+				if err != nil {
+					return 0, nil, err
+				}
+			}
+			if len(host.PrivateKey) != 0 {
+				item.PrivateKey, err = encrypt.StringDecrypt(host.PrivateKey)
+				if err != nil {
+					return 0, nil, err
+				}
+			}
+			if len(host.PassPhrase) != 0 {
+				item.PassPhrase, err = encrypt.StringDecrypt(host.PassPhrase)
+				if err != nil {
+					return 0, nil, err
+				}
+			}
 		}
 		dtoHosts = append(dtoHosts, item)
 	}
@@ -164,12 +222,34 @@ func (u *HostService) SearchForTree(search dto.SearchForTree) ([]dto.HostTree, e
 }
 
 func (u *HostService) Create(req dto.HostOperate) (*dto.HostInfo, error) {
+	var err error
+	if len(req.Password) != 0 && req.AuthMode == "password" {
+		req.Password, err = u.EncryptHost(req.Password)
+		if err != nil {
+			return nil, err
+		}
+		req.PrivateKey = ""
+		req.PassPhrase = ""
+	}
+	if len(req.PrivateKey) != 0 && req.AuthMode == "key" {
+		req.PrivateKey, err = u.EncryptHost(req.PrivateKey)
+		if err != nil {
+			return nil, err
+		}
+		if len(req.PassPhrase) != 0 {
+			req.PassPhrase, err = encrypt.StringEncrypt(req.PassPhrase)
+			if err != nil {
+				return nil, err
+			}
+		}
+		req.Password = ""
+	}
 	var host model.Host
 	if err := copier.Copy(&host, &req); err != nil {
 		return nil, errors.WithMessage(constant.ErrStructTransform, err.Error())
 	}
 	if req.GroupID == 0 {
-		group, err := groupRepo.Get(groupRepo.WithByIsDefault(true))
+		group, err := groupRepo.Get(groupRepo.WithByHostDefault())
 		if err != nil {
 			return nil, errors.New("get default group failed")
 		}
@@ -233,4 +313,13 @@ func (u *HostService) Delete(ids []uint) error {
 
 func (u *HostService) Update(id uint, upMap map[string]interface{}) error {
 	return hostRepo.Update(id, upMap)
+}
+
+func (u *HostService) EncryptHost(itemVal string) (string, error) {
+	privateKey, err := base64.StdEncoding.DecodeString(itemVal)
+	if err != nil {
+		return "", err
+	}
+	keyItem, err := encrypt.StringEncrypt(string(privateKey))
+	return keyItem, err
 }

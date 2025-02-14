@@ -3,7 +3,7 @@
         <el-tabs
             type="card"
             class="terminal-tabs"
-            style="background-color: #efefef; margin-top: 20px"
+            style="background-color: var(--panel-terminal-tag-bg-color); margin-top: 20px"
             v-model="terminalValue"
             :before-leave="beforeLeave"
             @tab-change="quickCmd = ''"
@@ -44,16 +44,26 @@
                     </span>
                 </template>
                 <Terminal
-                    style="height: calc(100vh - 227px); background-color: #000"
+                    :style="{
+                        height: `calc(100vh - ${loadHeight()})`,
+                        'background-color': `var(--panel-logs-bg-color)`,
+                    }"
                     :ref="'t-' + item.index"
                     :key="item.Refresh"
                 ></Terminal>
-                <div>
-                    <el-select v-model="quickCmd" clearable filterable @change="quickInput" style="width: 25%">
+                <div class="flex w-full flex-col md:flex-row">
+                    <el-select v-model="quickCmd" clearable filterable @change="quickInput">
                         <template #prefix>{{ $t('terminal.quickCommand') }}</template>
-                        <el-option v-for="cmd in commandList" :key="cmd.id" :label="cmd.name" :value="cmd.command" />
+                        <el-option-group v-for="group in commandTree" :key="group.label" :label="group.label">
+                            <el-option
+                                v-for="(cmd, index) in group.children"
+                                :key="index"
+                                :label="cmd.name"
+                                :value="cmd.command"
+                            />
+                        </el-option-group>
                     </el-select>
-                    <el-input v-model="batchVal" @keyup.enter="batchInput" style="width: 75%">
+                    <el-input v-model="batchVal" @keyup.enter="batchInput">
                         <template #prepend>
                             <el-checkbox :label="$t('terminal.batchInput')" v-model="isBatch" />
                         </template>
@@ -62,24 +72,20 @@
             </el-tab-pane>
             <el-tab-pane :closable="false" name="newTabs">
                 <template #label>
-                    <el-button
-                        v-popover="popoverRef"
-                        style="background-color: #ededed; border: 0"
-                        icon="Plus"
-                    ></el-button>
+                    <el-button v-popover="popoverRef" class="tagButton" icon="Plus"></el-button>
                     <el-popover ref="popoverRef" width="250px" trigger="hover" virtual-triggering persistent>
-                        <div style="margin-left: 10px">
+                        <div class="ml-2.5">
                             <el-button link type="primary" @click="onNewSsh">{{ $t('terminal.createConn') }}</el-button>
                         </div>
-                        <div style="margin-left: 10px">
+                        <div class="ml-2.5">
                             <el-button link type="primary" @click="onNewLocal">
                                 {{ $t('terminal.localhost') }}
                             </el-button>
                         </div>
                         <div class="search-button" style="float: none">
                             <el-input
-                                v-model="hostfilterInfo"
-                                style="margin-top: 5px"
+                                v-model="hostFilterInfo"
+                                style="margin-top: 5px; width: 90%"
                                 clearable
                                 suffix-icon="Search"
                                 :placeholder="$t('commons.button.search')"
@@ -102,7 +108,7 @@
                                         <span v-if="node.label.length <= 25">
                                             <a @click="onClickConn(node, data)">{{ node.label }}</a>
                                         </span>
-                                        <el-tooltip v-else :content="node.label" placement="top-start">
+                                        <el-tooltip v-else :content="node.label" placement="right">
                                             <span>
                                                 <a @click="onClickConn(node, data)">
                                                     {{ node.label.substring(0, 22) }}...
@@ -118,19 +124,27 @@
             </el-tab-pane>
             <div v-if="terminalTabs.length === 0">
                 <el-empty
-                    style="background-color: #000; height: calc(100vh - 200px)"
+                    :style="{ height: `calc(100vh - ${loadEmptyHeight()})`, 'background-color': '#000' }"
                     :description="$t('terminal.emptyTerminal')"
                 ></el-empty>
             </div>
         </el-tabs>
-        <el-button @click="toggleFullscreen" class="fullScreen" icon="FullScreen"></el-button>
+        <el-tooltip :content="loadTooltip()" placement="top">
+            <el-button
+                @click="toggleFullscreen"
+                v-if="!mobile"
+                class="fullScreen"
+                :style="{ top: loadFullScreenHeight() }"
+                icon="FullScreen"
+            ></el-button>
+        </el-tooltip>
 
         <HostDialog ref="dialogRef" @on-conn-terminal="onConnTerminal" @load-host-tree="loadHostTree" />
     </div>
 </template>
 
 <script setup lang="ts">
-import { ref, getCurrentInstance, watch, nextTick } from 'vue';
+import { ref, getCurrentInstance, watch, nextTick, computed, onMounted } from 'vue';
 import Terminal from '@/components/terminal/index.vue';
 import HostDialog from '@/views/host/terminal/terminal/host-create.vue';
 import type Node from 'element-plus/es/components/tree/src/model/node';
@@ -138,20 +152,26 @@ import { ElTree } from 'element-plus';
 import screenfull from 'screenfull';
 import i18n from '@/lang';
 import { Host } from '@/api/interface/host';
-import { getHostTree, testByID } from '@/api/modules/host';
-import { getCommandList } from '@/api/modules/host';
+import { getCommandTree, getHostTree, testByID } from '@/api/modules/host';
 import { GlobalStore } from '@/store';
+import router from '@/routers';
 
 const dialogRef = ref();
 const ctx = getCurrentInstance() as any;
 const globalStore = GlobalStore();
+const mobile = computed(() => {
+    return globalStore.isMobile();
+});
 
 function toggleFullscreen() {
     if (screenfull.isEnabled) {
         screenfull.toggle();
-        globalStore.setScreenFull();
     }
+    globalStore.isFullScreen = !screenfull.isFullscreen;
 }
+const loadTooltip = () => {
+    return i18n.global.t('commons.button.' + (globalStore.isFullScreen ? 'quitFullscreen' : 'fullscreen'));
+};
 
 const localHostID = ref();
 
@@ -160,14 +180,14 @@ const terminalValue = ref();
 const terminalTabs = ref([]) as any;
 let tabIndex = 0;
 
-const commandList = ref();
+const commandTree = ref();
 let quickCmd = ref();
 let batchVal = ref();
 let isBatch = ref<boolean>(false);
 
 const popoverRef = ref();
 
-const hostfilterInfo = ref('');
+const hostFilterInfo = ref('');
 const hostTree = ref<Array<Host.HostTree>>();
 const treeRef = ref<InstanceType<typeof ElTree>>();
 const defaultProps = {
@@ -179,9 +199,11 @@ interface Tree {
     label: string;
     children?: Tree[];
 }
+const initCmd = ref('');
 
 const acceptParams = async () => {
-    loadCommand();
+    globalStore.isFullScreen = false;
+    loadCommandTree();
     const res = await getHostTree({});
     hostTree.value = res.data;
     timer = setInterval(() => {
@@ -206,6 +228,12 @@ const acceptParams = async () => {
             }
         }
     }
+
+    if (!mobile.value) {
+        screenfull.on('change', () => {
+            globalStore.isFullScreen = screenfull.isFullscreen;
+        });
+    }
 };
 const cleanTimer = () => {
     clearInterval(Number(timer));
@@ -215,6 +243,16 @@ const cleanTimer = () => {
             terminal.status = ctx.refs[`t-${terminal.index}`][0].onClose();
         }
     }
+};
+
+const loadHeight = () => {
+    return globalStore.openMenuTabs ? '269px' : '229px';
+};
+const loadEmptyHeight = () => {
+    return globalStore.openMenuTabs ? '240px' : '200px';
+};
+const loadFullScreenHeight = () => {
+    return globalStore.openMenuTabs ? '66px' : '90px';
 };
 
 const handleTabsRemove = (targetName: string, action: 'remove' | 'add') => {
@@ -244,16 +282,16 @@ const loadHostTree = async () => {
     const res = await getHostTree({});
     hostTree.value = res.data;
 };
-watch(hostfilterInfo, (val: any) => {
+watch(hostFilterInfo, (val: any) => {
     treeRef.value!.filter(val);
 });
 const filterHost = (value: string, data: any) => {
     if (!value) return true;
     return data.label.includes(value);
 };
-const loadCommand = async () => {
-    const res = await getCommandList();
-    commandList.value = res.data;
+const loadCommandTree = async () => {
+    const res = await getCommandTree();
+    commandTree.value = res.data || [];
 };
 
 function quickInput(val: any) {
@@ -294,7 +332,7 @@ const onNewSsh = () => {
     dialogRef.value!.acceptParams({ isLocal: false });
 };
 const onNewLocal = () => {
-    onConnTerminal(i18n.global.t('terminal.localhost'), localHostID.value, true);
+    onConnTerminal(i18n.global.t('terminal.localhost'), localHostID.value, false);
 };
 
 const onClickConn = (node: Node, data: Tree) => {
@@ -327,9 +365,9 @@ const onConnTerminal = async (title: string, wsID: number, isLocal?: boolean) =>
         for (const tab of terminalTabs.value) {
             if (tab.title.indexOf('@127.0.0.1:') !== -1 || tab.title === i18n.global.t('terminal.localhost')) {
                 onReconnect(tab);
-                return;
             }
         }
+        return;
     }
     terminalTabs.value.push({
         index: tabIndex,
@@ -339,7 +377,7 @@ const onConnTerminal = async (title: string, wsID: number, isLocal?: boolean) =>
         latency: 0,
     });
     terminalValue.value = tabIndex;
-    if (!res.data && isLocal) {
+    if (!res.data && title === i18n.global.t('terminal.localhost')) {
         dialogRef.value!.acceptParams({ isLocal: true });
     }
     nextTick(() => {
@@ -347,8 +385,10 @@ const onConnTerminal = async (title: string, wsID: number, isLocal?: boolean) =>
             ctx.refs[`t-${terminalValue.value}`][0].acceptParams({
                 endpoint: '/api/v1/terminals',
                 args: `id=${wsID}`,
-                error: res.data ? '' : 'Authentication failed.  Please check the host information !',
+                initCmd: initCmd.value,
+                error: res.data ? '' : 'Authentication failed. Please check the host information!',
             });
+        initCmd.value = '';
     });
     tabIndex++;
 };
@@ -365,6 +405,13 @@ function syncTerminal() {
 defineExpose({
     acceptParams,
     cleanTimer,
+});
+
+onMounted(() => {
+    if (router.currentRoute.value.query.path) {
+        const path = String(router.currentRoute.value.query.path);
+        initCmd.value = `cd "${path}" \n`;
+    }
 });
 </script>
 
@@ -383,13 +430,23 @@ defineExpose({
         z-index: calc(var(--el-index-normal) + 1);
     }
     :deep(.el-tabs__item) {
-        color: #575758;
-        padding: 0 0px;
+        padding: 0;
     }
     :deep(.el-tabs__item.is-active) {
-        color: #ebeef5;
-        background-color: #575758;
+        color: var(--panel-terminal-tag-active-text-color);
+        background-color: var(--panel-terminal-tag-active-bg-color);
     }
+    :deep(.el-tabs__item:hover) {
+        color: var(--panel-terminal-tag-hover-text-color);
+    }
+    :deep(.el-tabs__item.is-active:hover) {
+        color: var(--panel-terminal-tag-active-text-color);
+    }
+}
+
+.tagButton {
+    border: 0;
+    background-color: var(--el-tabs__item);
 }
 
 .vertical-tabs > .el-tabs__content {
@@ -399,9 +456,10 @@ defineExpose({
     font-weight: 600;
 }
 .fullScreen {
+    background-color: transparent;
+    border: none;
     position: absolute;
     right: 50px;
-    top: 90px;
     font-weight: 600;
     font-size: 14px;
 }

@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/1Panel-dev/1Panel/backend/buserr"
+	"github.com/1Panel-dev/1Panel/backend/constant"
 	"github.com/1Panel-dev/1Panel/backend/utils/cmd"
 )
 
@@ -14,9 +16,9 @@ type Ufw struct {
 func NewUfw() (*Ufw, error) {
 	var ufw Ufw
 	if cmd.HasNoPasswordSudo() {
-		ufw.CmdStr = "sudo ufw"
+		ufw.CmdStr = "LANGUAGE=en_US:en sudo ufw"
 	} else {
-		ufw.CmdStr = "ufw"
+		ufw.CmdStr = "LANGUAGE=en_US:en ufw"
 	}
 	return &ufw, nil
 }
@@ -28,10 +30,6 @@ func (f *Ufw) Name() string {
 func (f *Ufw) Status() (string, error) {
 	stdout, _ := cmd.Execf("%s status | grep Status", f.CmdStr)
 	if stdout == "Status: active\n" {
-		return "running", nil
-	}
-	stdout1, _ := cmd.Execf("%s status | grep 状态", f.CmdStr)
-	if stdout1 == "状态： 激活\n" {
 		return "running", nil
 	}
 	return "not running", nil
@@ -58,6 +56,16 @@ func (f *Ufw) Stop() error {
 	stdout, err := cmd.Execf("%s disable", f.CmdStr)
 	if err != nil {
 		return fmt.Errorf("stop the firewall failed, err: %s", stdout)
+	}
+	return nil
+}
+
+func (f *Ufw) Restart() error {
+	if err := f.Stop(); err != nil {
+		return err
+	}
+	if err := f.Start(); err != nil {
+		return err
 	}
 	return nil
 }
@@ -89,6 +97,38 @@ func (f *Ufw) ListPort() ([]FireInfo, error) {
 		}
 	}
 	return datas, nil
+}
+
+func (f *Ufw) ListForward() ([]FireInfo, error) {
+	_ = f.EnableForward()
+	iptables, err := NewIptables()
+	if err != nil {
+		return nil, err
+	}
+
+	rules, err := iptables.NatList()
+	if err != nil {
+		return nil, err
+	}
+
+	var list []FireInfo
+	for _, rule := range rules {
+		dest := strings.Split(rule.DestPort, ":")
+		if len(dest) < 2 {
+			continue
+		}
+		if len(dest[0]) == 0 {
+			dest[0] = "127.0.0.1"
+		}
+		list = append(list, FireInfo{
+			Num:        rule.Num,
+			Protocol:   rule.Protocol,
+			Port:       rule.SrcPort,
+			TargetIP:   dest[0],
+			TargetPort: dest[1],
+		})
+	}
+	return list, nil
 }
 
 func (f *Ufw) ListAddress() ([]FireInfo, error) {
@@ -129,7 +169,10 @@ func (f *Ufw) Port(port FireInfo, operation string) error {
 	case "drop":
 		port.Strategy = "deny"
 	default:
-		return fmt.Errorf("unsupport strategy %s", port.Strategy)
+		return fmt.Errorf("unsupported strategy %s", port.Strategy)
+	}
+	if cmd.CheckIllegal(port.Protocol, port.Port) {
+		return buserr.New(constant.ErrCmdIllegal)
 	}
 
 	command := fmt.Sprintf("%s %s %s", f.CmdStr, port.Strategy, port.Port)
@@ -141,7 +184,7 @@ func (f *Ufw) Port(port FireInfo, operation string) error {
 	}
 	stdout, err := cmd.Exec(command)
 	if err != nil {
-		return fmt.Errorf("%s port failed, err: %s", operation, stdout)
+		return fmt.Errorf("%s (%s) failed, err: %s", operation, command, stdout)
 	}
 	return nil
 }
@@ -153,10 +196,14 @@ func (f *Ufw) RichRules(rule FireInfo, operation string) error {
 	case "drop":
 		rule.Strategy = "deny"
 	default:
-		return fmt.Errorf("unsupport strategy %s", rule.Strategy)
+		return fmt.Errorf("unsupported strategy %s", rule.Strategy)
 	}
 
-	ruleStr := fmt.Sprintf("%s %s ", f.CmdStr, rule.Strategy)
+	if cmd.CheckIllegal(operation, rule.Protocol, rule.Address, rule.Port) {
+		return buserr.New(constant.ErrCmdIllegal)
+	}
+
+	ruleStr := fmt.Sprintf("%s insert 1 %s ", f.CmdStr, rule.Strategy)
 	if operation == "remove" {
 		ruleStr = fmt.Sprintf("%s delete %s ", f.CmdStr, rule.Strategy)
 	}
@@ -174,23 +221,31 @@ func (f *Ufw) RichRules(rule FireInfo, operation string) error {
 
 	stdout, err := cmd.Exec(ruleStr)
 	if err != nil {
-		return fmt.Errorf("%s rich rules failed, err: %s", operation, stdout)
+		if strings.Contains(stdout, "ERROR: Invalid position") || strings.Contains(stdout, "ERROR: 无效位置") {
+			stdout, err := cmd.Exec(strings.ReplaceAll(ruleStr, "insert 1 ", ""))
+			if err != nil {
+				return fmt.Errorf("%s rich rules (%s), failed, err: %s", operation, ruleStr, stdout)
+			}
+			return nil
+		}
+		return fmt.Errorf("%s rich rules (%s), failed, err: %s", operation, ruleStr, stdout)
 	}
 	return nil
 }
 
 func (f *Ufw) PortForward(info Forward, operation string) error {
-	ruleStr := fmt.Sprintf("firewall-cmd --%s-forward-port=port=%s:proto=%s:toport=%s --permanent", operation, info.Port, info.Protocol, info.Target)
-	if len(info.Address) != 0 {
-		ruleStr = fmt.Sprintf("firewall-cmd --%s-forward-port=port=%s:proto=%s:toaddr=%s:toport=%s --permanent", operation, info.Port, info.Protocol, info.Address, info.Target)
+	iptables, err := NewIptables()
+	if err != nil {
+		return err
 	}
 
-	stdout, err := cmd.Exec(ruleStr)
-	if err != nil {
-		return fmt.Errorf("%s port forward failed, err: %s", operation, stdout)
+	if operation == "add" {
+		err = iptables.NatAdd(info.Protocol, info.Port, info.TargetIP, info.TargetPort, true)
+	} else {
+		err = iptables.NatRemove(info.Num, info.Protocol, info.Port, info.TargetIP, info.TargetPort)
 	}
-	if err := f.Reload(); err != nil {
-		return err
+	if err != nil {
+		return fmt.Errorf("%s port forward failed, err: %s", operation, err)
 	}
 	return nil
 }
@@ -198,10 +253,13 @@ func (f *Ufw) PortForward(info Forward, operation string) error {
 func (f *Ufw) loadInfo(line string, fireType string) FireInfo {
 	fields := strings.Fields(line)
 	var itemInfo FireInfo
+	if strings.Contains(line, "LIMIT") || strings.Contains(line, "ALLOW FWD") {
+		return itemInfo
+	}
 	if len(fields) < 4 {
 		return itemInfo
 	}
-	if fields[1] == "(v6)" {
+	if fields[1] == "(v6)" && fireType == "port" {
 		return itemInfo
 	}
 	if fields[0] == "Anywhere" && fireType != "port" {
@@ -209,7 +267,14 @@ func (f *Ufw) loadInfo(line string, fireType string) FireInfo {
 		if fields[1] == "ALLOW" {
 			itemInfo.Strategy = "accept"
 		}
-		itemInfo.Address = fields[3]
+		if fields[1] == "(v6)" {
+			if fields[2] == "ALLOW" {
+				itemInfo.Strategy = "accept"
+			}
+			itemInfo.Address = fields[4]
+		} else {
+			itemInfo.Address = fields[3]
+		}
 		return itemInfo
 	}
 	if strings.Contains(fields[0], "/") {
@@ -228,4 +293,41 @@ func (f *Ufw) loadInfo(line string, fireType string) FireInfo {
 	itemInfo.Address = fields[3]
 
 	return itemInfo
+}
+
+func (f *Ufw) EnableForward() error {
+	iptables, err := NewIptables()
+	if err != nil {
+		return err
+	}
+
+	if err = iptables.Check(); err != nil {
+		return err
+	}
+
+	_ = iptables.NewChain(NatTab, PreRoutingChain)
+	_ = iptables.NewChain(NatTab, PostRoutingChain)
+	_ = iptables.NewChain(FilterTab, ForwardChain)
+
+	if err = f.enableChain(iptables); err != nil {
+		return err
+	}
+	return iptables.Reload()
+}
+
+func (f *Ufw) enableChain(iptables *Iptables) error {
+	rules, err := iptables.NatList("PREROUTING")
+	if err != nil {
+		return err
+	}
+	for _, rule := range rules {
+		if rule.Target == PreRoutingChain {
+			return nil
+		}
+	}
+
+	_ = iptables.AppendChain(NatTab, "PREROUTING", PreRoutingChain)
+	_ = iptables.AppendChain(NatTab, "POSTROUTING", PostRoutingChain)
+	_ = iptables.AppendChain(FilterTab, "FORWARD", ForwardChain)
+	return nil
 }

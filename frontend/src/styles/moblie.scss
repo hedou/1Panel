@@ -30,7 +30,6 @@
             min-width: auto !important;
         }
         .d-description {
-            display: block !important;
             overflow: inherit !important;
         }
     }
@@ -64,5 +63,27 @@
                 margin-left: 20px;
             }
         }
+    }
+
+    .mini-form-item {
+        width: 100% !important;
+    }
+
+    .database-status {
+        .title {
+            margin-left: 10px !important;
+        }
+        .content {
+            margin-left: 10px !important;
+        }
+    }
+
+    @media only screen and (max-width: 768px) {
+        .el-col-xs-24 {
+            margin-bottom: 10px;
+        }
+    }
+    .el-dialog {
+        --el-dialog-width: 80% !important;
     }
 }

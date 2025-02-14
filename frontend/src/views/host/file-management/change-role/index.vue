@@ -1,12 +1,18 @@
 <template>
-    <el-drawer v-model="open" :before-close="handleClose" :close-on-click-modal="false" width="50%">
+    <el-drawer
+        v-model="open"
+        :before-close="handleClose"
+        :close-on-click-modal="false"
+        :close-on-press-escape="false"
+        size="50%"
+    >
         <template #header>
-            <DrawerHeader :header="$t('file.setRole')" :resource="name" :back="handleClose" />
+            <DrawerHeader :header="$t('file.editPermissions')" :resource="name" :back="handleClose" />
         </template>
 
         <el-row>
             <el-col :span="22" :offset="1">
-                <FileRole v-loading="loading" :mode="mode" @get-mode="getMode"></FileRole>
+                <FileRole v-loading="loading" :mode="mode" @get-mode="getMode" :key="open.toString()"></FileRole>
                 <el-form-item v-if="form.isDir">
                     <el-checkbox v-model="form.sub">{{ $t('file.containSub') }}</el-checkbox>
                 </el-form-item>
@@ -32,7 +38,7 @@ import { MsgSuccess } from '@/utils/message';
 
 const open = ref(false);
 const form = ref<File.FileCreate>({ path: '', isDir: false, mode: 0o755 });
-const loading = ref<Boolean>(false);
+const loading = ref(false);
 const mode = ref('0755');
 const name = ref('');
 

@@ -8,7 +8,7 @@ import (
 
 type ContainerRouter struct{}
 
-func (s *ContainerRouter) InitContainerRouter(Router *gin.RouterGroup) {
+func (s *ContainerRouter) InitRouter(Router *gin.RouterGroup) {
 	baRouter := Router.Group("containers").
 		Use(middleware.JwtAuth()).
 		Use(middleware.SessionAuth()).
@@ -19,10 +19,20 @@ func (s *ContainerRouter) InitContainerRouter(Router *gin.RouterGroup) {
 		baRouter.GET("/stats/:id", baseApi.ContainerStats)
 
 		baRouter.POST("", baseApi.ContainerCreate)
+		baRouter.POST("/update", baseApi.ContainerUpdate)
+		baRouter.POST("/upgrade", baseApi.ContainerUpgrade)
+		baRouter.POST("/info", baseApi.ContainerInfo)
 		baRouter.POST("/search", baseApi.SearchContainer)
-		baRouter.POST("/search/log", baseApi.ContainerLogs)
+		baRouter.POST("/list", baseApi.ListContainer)
+		baRouter.GET("/list/stats", baseApi.ContainerListStats)
+		baRouter.GET("/search/log", baseApi.ContainerLogs)
+		baRouter.POST("/download/log", baseApi.DownloadContainerLogs)
+		baRouter.GET("/limit", baseApi.LoadResourceLimit)
 		baRouter.POST("/clean/log", baseApi.CleanContainerLog)
+		baRouter.POST("/load/log", baseApi.LoadContainerLog)
 		baRouter.POST("/inspect", baseApi.Inspect)
+		baRouter.POST("/rename", baseApi.ContainerRename)
+		baRouter.POST("/commit", baseApi.ContainerCommit)
 		baRouter.POST("/operate", baseApi.ContainerOperation)
 		baRouter.POST("/prune", baseApi.ContainerPrune)
 
@@ -38,6 +48,7 @@ func (s *ContainerRouter) InitContainerRouter(Router *gin.RouterGroup) {
 		baRouter.POST("/compose/test", baseApi.TestCompose)
 		baRouter.POST("/compose/operate", baseApi.OperatorCompose)
 		baRouter.POST("/compose/update", baseApi.ComposeUpdate)
+		baRouter.GET("/compose/search/log", baseApi.ComposeLogs)
 
 		baRouter.GET("/template", baseApi.ListComposeTemplate)
 		baRouter.POST("/template/search", baseApi.SearchComposeTemplate)
@@ -46,6 +57,7 @@ func (s *ContainerRouter) InitContainerRouter(Router *gin.RouterGroup) {
 		baRouter.POST("/template/del", baseApi.DeleteComposeTemplate)
 
 		baRouter.GET("/image", baseApi.ListImage)
+		baRouter.GET("/image/all", baseApi.ListAllImage)
 		baRouter.POST("/image/search", baseApi.SearchImage)
 		baRouter.POST("/image/pull", baseApi.ImagePull)
 		baRouter.POST("/image/push", baseApi.ImagePush)
@@ -55,10 +67,11 @@ func (s *ContainerRouter) InitContainerRouter(Router *gin.RouterGroup) {
 		baRouter.POST("/image/tag", baseApi.ImageTag)
 		baRouter.POST("/image/build", baseApi.ImageBuild)
 
-		baRouter.GET("/volume", baseApi.ListVolume)
+		baRouter.GET("/network", baseApi.ListNetwork)
 		baRouter.POST("/network/del", baseApi.DeleteNetwork)
 		baRouter.POST("/network/search", baseApi.SearchNetwork)
 		baRouter.POST("/network", baseApi.CreateNetwork)
+		baRouter.GET("/volume", baseApi.ListVolume)
 		baRouter.POST("/volume/del", baseApi.DeleteVolume)
 		baRouter.POST("/volume/search", baseApi.SearchVolume)
 		baRouter.POST("/volume", baseApi.CreateVolume)
@@ -69,6 +82,7 @@ func (s *ContainerRouter) InitContainerRouter(Router *gin.RouterGroup) {
 		baRouter.POST("/docker/operate", baseApi.OperateDocker)
 		baRouter.POST("/daemonjson/update", baseApi.UpdateDaemonJson)
 		baRouter.POST("/logoption/update", baseApi.UpdateLogOption)
+		baRouter.POST("/ipv6option/update", baseApi.UpdateIpv6Option)
 		baRouter.POST("/daemonjson/update/byfile", baseApi.UpdateDaemonJsonByFile)
 	}
 }

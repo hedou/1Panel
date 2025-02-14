@@ -7,7 +7,7 @@
                         <el-tag effect="dark" type="success">{{ composeName }}</el-tag>
                     </div>
                     <div v-if="createdBy === '1Panel'" style="margin-left: 50px">
-                        <el-button link type="primary" @click="onComposeOperate('start')">
+                        <el-button link type="primary" @click="onComposeOperate('up')">
                             {{ $t('container.start') }}
                         </el-button>
                         <el-divider direction="vertical" />
@@ -69,9 +69,17 @@
                     @search="search"
                 >
                     <el-table-column type="selection" fix />
-                    <el-table-column :label="$t('commons.table.name')" min-width="100" prop="name" fix>
+                    <el-table-column
+                        :label="$t('commons.table.name')"
+                        min-width="100"
+                        prop="name"
+                        fix
+                        show-overflow-tooltip
+                    >
                         <template #default="{ row }">
-                            <Tooltip @click="onInspect(row.containerID)" :text="row.name" />
+                            <el-button text type="primary" @click="onInspect(row.containerID)">
+                                {{ row.name }}
+                            </el-button>
                         </template>
                     </el-table-column>
                     <el-table-column
@@ -102,9 +110,9 @@
                 </ComplexTable>
 
                 <CodemirrorDialog ref="mydetail" />
+                <OpDialog ref="opRef" @search="search" />
 
                 <ContainerLogDialog ref="dialogContainerLogRef" />
-                <CreateDialog @search="search" ref="dialogCreateRef" />
                 <MonitorDialog ref="dialogMonitorRef" />
                 <TerminalDialog ref="dialogTerminalRef" />
             </template>
@@ -114,15 +122,13 @@
 
 <script lang="ts" setup>
 import { reactive, ref } from 'vue';
-import Tooltip from '@/components/tooltip/index.vue';
-import CreateDialog from '@/views/container/container/create/index.vue';
 import MonitorDialog from '@/views/container/container/monitor/index.vue';
 import ContainerLogDialog from '@/views/container/container/log/index.vue';
 import TerminalDialog from '@/views/container/container/terminal/index.vue';
 import CodemirrorDialog from '@/components/codemirror-dialog/index.vue';
 import Status from '@/components/status/index.vue';
 import { dateFormat } from '@/utils/util';
-import { composeOperator, ContainerOperator, inspect, searchContainer } from '@/api/modules/container';
+import { composeOperator, containerOperator, inspect, searchContainer } from '@/api/modules/container';
 import { ElMessageBox } from 'element-plus';
 import i18n from '@/lang';
 import { Container } from '@/api/interface/container';
@@ -133,7 +139,10 @@ const composePath = ref();
 const filters = ref();
 const createdBy = ref();
 
-const emit = defineEmits<{ (e: 'back'): void }>();
+const dialogContainerLogRef = ref();
+
+const opRef = ref();
+
 interface DialogProps {
     createdBy: string;
     name: string;
@@ -151,6 +160,7 @@ const acceptParams = (props: DialogProps): void => {
 const data = ref();
 const selects = ref<any>([]);
 const paginationConfig = reactive({
+    cacheSizeKey: 'container-page-size',
     currentPage: 1,
     pageSize: 10,
     total: 0,
@@ -162,14 +172,23 @@ const search = async () => {
     let filterItem = filters.value;
     let params = {
         name: '',
+        state: 'all',
         page: paginationConfig.currentPage,
         pageSize: paginationConfig.pageSize,
         filters: filterItem,
+        orderBy: 'created_at',
+        order: 'null',
     };
-    await searchContainer(params).then((res) => {
-        data.value = res.data.items || [];
-        paginationConfig.total = res.data.total;
-    });
+    loading.value = true;
+    await searchContainer(params)
+        .then((res) => {
+            loading.value = false;
+            data.value = res.data.items || [];
+            paginationConfig.total = res.data.total;
+        })
+        .catch(() => {
+            loading.value = false;
+        });
 };
 
 const detailInfo = ref();
@@ -220,49 +239,38 @@ const checkStatus = (operation: string) => {
     }
 };
 
-const onOperate = async (operation: string) => {
-    let msg = i18n.global.t('container.operatorHelper', [i18n.global.t('container.' + operation)]);
+const onOperate = async (op: string) => {
+    let msg = i18n.global.t('container.operatorHelper', [i18n.global.t('container.' + op)]);
+    let names = [];
     for (const item of selects.value) {
+        names.push(item.name);
         if (item.isFromApp) {
-            msg = i18n.global.t('container.operatorAppHelper', [i18n.global.t('container.' + operation)]);
-            break;
+            msg = i18n.global.t('container.operatorAppHelper', [i18n.global.t('container.' + op)]);
         }
     }
-    ElMessageBox.confirm(msg, i18n.global.t('container.' + operation), {
-        confirmButtonText: i18n.global.t('commons.button.confirm'),
-        cancelButtonText: i18n.global.t('commons.button.cancel'),
-        type: 'info',
-    }).then(() => {
-        let ps = [];
-        for (const item of selects.value) {
-            const param = {
-                name: item.name,
-                operation: operation,
-                newName: '',
-            };
-            ps.push(ContainerOperator(param));
-        }
-        Promise.all(ps)
-            .then(() => {
-                search();
-                MsgSuccess(i18n.global.t('commons.msg.operationSuccess'));
-            })
-            .catch(() => {
-                search();
-            });
+    opRef.value.acceptParams({
+        title: i18n.global.t('container.' + op),
+        names: names,
+        msg: msg,
+        api: containerOperator,
+        params: { names: names, operation: op },
+        successMsg: `${i18n.global.t('container.' + op)}${i18n.global.t('commons.status.success')}`,
     });
 };
 
 const onComposeOperate = async (operation: string) => {
-    ElMessageBox.confirm(
-        i18n.global.t('container.composeOperatorHelper', [composeName.value, i18n.global.t('container.' + operation)]),
-        i18n.global.t('container.' + operation),
-        {
-            confirmButtonText: i18n.global.t('commons.button.confirm'),
-            cancelButtonText: i18n.global.t('commons.button.cancel'),
-            type: 'info',
-        },
-    ).then(async () => {
+    let mes =
+        operation === 'down'
+            ? i18n.global.t('container.composeDownHelper', [composeName.value])
+            : i18n.global.t('container.composeOperatorHelper', [
+                  composeName.value,
+                  i18n.global.t('container.' + operation),
+              ]);
+    ElMessageBox.confirm(mes, i18n.global.t('container.' + operation), {
+        confirmButtonText: i18n.global.t('commons.button.confirm'),
+        cancelButtonText: i18n.global.t('commons.button.cancel'),
+        type: 'info',
+    }).then(async () => {
         let params = {
             name: composeName.value,
             path: composePath.value,
@@ -274,11 +282,7 @@ const onComposeOperate = async (operation: string) => {
             .then(() => {
                 loading.value = false;
                 MsgSuccess(i18n.global.t('commons.msg.operationSuccess'));
-                if (operation === 'down') {
-                    emit('back');
-                } else {
-                    search();
-                }
+                search();
             })
             .catch(() => {
                 loading.value = false;
@@ -295,8 +299,6 @@ const dialogTerminalRef = ref();
 const onTerminal = (row: any) => {
     dialogTerminalRef.value!.acceptParams({ containerID: row.containerID, container: row.name });
 };
-
-const dialogContainerLogRef = ref();
 
 const buttons = [
     {

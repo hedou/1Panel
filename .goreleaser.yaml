@@ -1,11 +1,13 @@
-# This is an example .goreleaser.yml file with some sensible defaults.
-# Make sure to check the documentation at https://goreleaser.com
+# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
+# vim: set ts=2 sw=2 tw=0 fo=jcroql
+version: 2
+
 before:
   hooks:
     # - export NODE_OPTIONS="--max-old-space-size=8192"
     # - make build_web
-    - chmod +x ./script.sh
-    - ./script.sh
+    - chmod +x ./ci/script.sh
+    - ./ci/script.sh
     - sed -i 's@ORIGINAL_VERSION=.*@ORIGINAL_VERSION=v{{ .Version }}@g' 1pctl
     - go mod tidy
     
@@ -13,21 +15,12 @@ builds:
   - main: ./cmd/server/main.go
     binary: 1panel
     flags:
+      - -tags=xpack
       - -trimpath
     ldflags:
       - -w -s
-      - --extldflags "-static -fpic"
-    tags:
-      - osusergo
     env:
-      - CGO_ENABLED=1
-      - >-
-        {{- if eq .Arch "amd64"}}CC=x86_64-linux-gnu-gcc{{- end }}
-        {{- if eq .Arch "arm64"}}CC=aarch64-linux-gnu-gcc{{- end }}
-        {{- if eq .Arch "arm"}}CC=arm-linux-gnueabi-gcc{{- end }}
-        {{- if eq .Arch "loong64"}}CC=loongarch64-linux-gnu-gcc{{- end }}
-        {{- if eq .Arch "ppc64le"}}CC=powerpc64le-linux-gnu-gcc{{- end }}
-        {{- if eq .Arch "s390x"}}CC=s390x-linux-gnu-gcc{{- end }}
+      - CGO_ENABLED=0
     goos:
       - linux
     goarm:
@@ -47,22 +40,15 @@ archives:
       - 1pctl
       - 1panel.service
       - install.sh
-      - README.md
-      - LICENSE
-    
+      - GeoIP.mmdb
+      - lang/*
+
 checksum:
   name_template: 'checksums.txt'
-snapshot:
-  name_template: "{{ incpatch .Version }}-next"
-release:
-  draft: true
-  mode: append
-  extra_files:
-    - glob: dist/*.tar.gz
-    - glob: dist/checksums.txt
-  name_template: "Release {{.Tag}}"
 
-# The lines beneath this are called `modelines`. See `:help modeline`
-# Feel free to remove those if you don't want/use them.
-# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
-# vim: set ts=2 sw=2 tw=0 fo=cnqoj
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"

@@ -2,6 +2,7 @@ package repo
 
 import (
 	"context"
+
 	"github.com/1Panel-dev/1Panel/backend/app/model"
 	"github.com/1Panel-dev/1Panel/backend/global"
 	"gorm.io/gorm"
@@ -19,9 +20,12 @@ type IBackupRepo interface {
 	Update(id uint, vars map[string]interface{}) error
 	Delete(opts ...DBOption) error
 	DeleteRecord(ctx context.Context, opts ...DBOption) error
+	UpdateRecord(record *model.BackupRecord) error
 	WithByDetailName(detailName string) DBOption
 	WithByFileName(fileName string) DBOption
 	WithByType(backupType string) DBOption
+	WithByCronID(cronjobID uint) DBOption
+	WithFileNameStartWith(filePrefix string) DBOption
 }
 
 func NewIBackupRepo() IBackupRepo {
@@ -78,6 +82,12 @@ func (u *BackupRepo) WithByFileName(fileName string) DBOption {
 	}
 }
 
+func (u *BackupRepo) WithFileNameStartWith(filePrefix string) DBOption {
+	return func(g *gorm.DB) *gorm.DB {
+		return g.Where("file_name LIKE ?", filePrefix+"%")
+	}
+}
+
 func (u *BackupRepo) WithByType(backupType string) DBOption {
 	return func(g *gorm.DB) *gorm.DB {
 		if len(backupType) == 0 {
@@ -105,6 +115,10 @@ func (u *BackupRepo) CreateRecord(record *model.BackupRecord) error {
 	return global.DB.Create(record).Error
 }
 
+func (u *BackupRepo) UpdateRecord(record *model.BackupRecord) error {
+	return global.DB.Save(record).Error
+}
+
 func (u *BackupRepo) Update(id uint, vars map[string]interface{}) error {
 	return global.DB.Model(&model.BackupAccount{}).Where("id = ?", id).Updates(vars).Error
 }
@@ -119,4 +133,10 @@ func (u *BackupRepo) Delete(opts ...DBOption) error {
 
 func (u *BackupRepo) DeleteRecord(ctx context.Context, opts ...DBOption) error {
 	return getTx(ctx, opts...).Delete(&model.BackupRecord{}).Error
+}
+
+func (u *BackupRepo) WithByCronID(cronjobID uint) DBOption {
+	return func(g *gorm.DB) *gorm.DB {
+		return g.Where("cronjob_id = ?", cronjobID)
+	}
 }

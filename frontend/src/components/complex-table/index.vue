@@ -3,37 +3,28 @@
         <div class="complex-table__header" v-if="$slots.header || header">
             <slot name="header">{{ header }}</slot>
         </div>
-        <div v-if="$slots.toolbar && !searchConfig" style="margin-bottom: 10px">
+        <div v-if="$slots.toolbar" style="margin-bottom: 10px">
             <slot name="toolbar"></slot>
         </div>
-
-        <template v-if="searchConfig">
-            <fu-filter-bar v-bind="searchConfig" @exec="search">
-                <template #tl>
-                    <slot name="toolbar"></slot>
-                </template>
-                <template #default>
-                    <slot name="complex"></slot>
-                </template>
-                <template #buttons>
-                    <slot name="buttons"></slot>
-                </template>
-            </fu-filter-bar>
-        </template>
 
         <div class="complex-table__body">
             <fu-table v-bind="$attrs" ref="tableRef" @selection-change="handleSelectionChange">
                 <slot></slot>
+                <template #empty>
+                    <slot name="empty"></slot>
+                </template>
             </fu-table>
         </div>
 
-        <div class="complex-table__pagination" v-if="$slots.pagination || paginationConfig">
+        <div class="complex-table__pagination" v-if="props.paginationConfig">
             <slot name="pagination">
-                <fu-table-pagination
+                <el-pagination
                     v-model:current-page="paginationConfig.currentPage"
                     v-model:page-size="paginationConfig.pageSize"
-                    v-bind="paginationConfig"
-                    @change="search"
+                    :total="paginationConfig.total"
+                    :page-sizes="[5, 10, 20, 50, 100]"
+                    @size-change="sizeChange"
+                    @current-change="currentChange"
                     :small="mobile"
                     :layout="mobile ? 'total, prev, pager, next' : 'total, sizes, prev, pager, next, jumper'"
                 />
@@ -42,19 +33,19 @@
     </div>
 </template>
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { GlobalStore } from '@/store';
 
 defineOptions({ name: 'ComplexTable' });
-defineProps({
+const props = defineProps({
     header: String,
-    searchConfig: Object,
     paginationConfig: {
         type: Object,
+        required: false,
         default: () => {},
     },
 });
-const emit = defineEmits(['search', 'update:selects']);
+const emit = defineEmits(['search', 'update:selects', 'update:paginationConfig']);
 
 const globalStore = GlobalStore();
 
@@ -62,24 +53,47 @@ const mobile = computed(() => {
     return globalStore.isMobile();
 });
 
-const condition = ref({});
 const tableRef = ref();
-function search(conditions: any, e: any) {
-    if (conditions) {
-        condition.value = conditions;
-    }
-    emit('search', condition.value, e);
+
+function currentChange() {
+    emit('search');
+}
+
+function sizeChange() {
+    props.paginationConfig.currentPage = 1;
+    localStorage.setItem(props.paginationConfig.cacheSizeKey, props.paginationConfig.pageSize);
+    emit('search');
 }
 
 function handleSelectionChange(row: any) {
     emit('update:selects', row);
 }
 
+function sort(prop: string, order: string) {
+    tableRef.value.refElTable.sort(prop, order);
+}
+
 function clearSelects() {
     tableRef.value.refElTable.clearSelection();
 }
+
+function clearSort() {
+    tableRef.value.refElTable.clearSort();
+}
+
 defineExpose({
     clearSelects,
+    sort,
+    clearSort,
+});
+
+onMounted(() => {
+    if (props.paginationConfig?.cacheSizeKey) {
+        let itemSize = Number(localStorage.getItem(props.paginationConfig.cacheSizeKey));
+        if (itemSize) {
+            props.paginationConfig.pageSize = itemSize;
+        }
+    }
 });
 </script>
 

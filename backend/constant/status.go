@@ -2,7 +2,7 @@ package constant
 
 const (
 	StatusRunning   = "Running"
-	StatusStoped    = "Stoped"
+	StatusDone      = "Done"
 	StatusWaiting   = "Waiting"
 	StatusSuccess   = "Success"
 	StatusFailed    = "Failed"
@@ -10,4 +10,9 @@ const (
 	StatusEnable    = "Enable"
 	StatusDisable   = "Disable"
 	StatusNone      = "None"
+	StatusOnRetry   = "OnRetry"
+	StatusLost      = "Lost"
+
+	OrderDesc = "descending"
+	OrderAsc  = "ascending"
 )

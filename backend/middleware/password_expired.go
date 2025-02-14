@@ -16,7 +16,7 @@ func PasswordExpired() gin.HandlerFunc {
 		settingRepo := repo.NewISettingRepo()
 		setting, err := settingRepo.Get(settingRepo.WithByKey("ExpirationDays"))
 		if err != nil {
-			helper.ErrorWithDetail(c, constant.CodePasswordExpired, constant.ErrTypePasswordExpired, err)
+			helper.ErrorWithDetail(c, constant.CodeErrInternalServer, constant.ErrTypePasswordExpired, err)
 			return
 		}
 		expiredDays, _ := strconv.Atoi(setting.Value)
@@ -27,17 +27,17 @@ func PasswordExpired() gin.HandlerFunc {
 
 		extime, err := settingRepo.Get(settingRepo.WithByKey("ExpirationTime"))
 		if err != nil {
-			helper.ErrorWithDetail(c, constant.CodePasswordExpired, constant.ErrTypePasswordExpired, err)
+			helper.ErrorWithDetail(c, constant.CodeErrInternalServer, constant.ErrTypePasswordExpired, err)
 			return
 		}
-		loc, _ := time.LoadLocation(common.LoadTimeZone())
-		expiredTime, err := time.ParseInLocation("2006-01-02 15:04:05", extime.Value, loc)
+		loc, _ := time.LoadLocation(common.LoadTimeZoneByCmd())
+		expiredTime, err := time.ParseInLocation(constant.DateTimeLayout, extime.Value, loc)
 		if err != nil {
 			helper.ErrorWithDetail(c, constant.CodePasswordExpired, constant.ErrTypePasswordExpired, err)
 			return
 		}
 		if time.Now().After(expiredTime) {
-			helper.ErrorWithDetail(c, constant.CodePasswordExpired, constant.ErrTypePasswordExpired, nil)
+			helper.ErrorWithDetail(c, constant.CodePasswordExpired, constant.ErrTypePasswordExpired, err)
 			return
 		}
 		c.Next()

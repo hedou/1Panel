@@ -9,8 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/1Panel-dev/1Panel/backend/app/api/v1/helper"
-	"github.com/1Panel-dev/1Panel/backend/constant"
+	"github.com/1Panel-dev/1Panel/backend/app/dto"
 	"github.com/1Panel-dev/1Panel/backend/global"
 	"github.com/1Panel-dev/1Panel/backend/utils/cmd"
 	"github.com/1Panel-dev/1Panel/backend/utils/copier"
@@ -22,24 +21,27 @@ import (
 )
 
 func (b *BaseApi) WsSsh(c *gin.Context) {
-	id, err := strconv.Atoi(c.Query("id"))
+	wsConn, err := upGrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeErrBadRequest, constant.ErrTypeInvalidParams, err)
+		global.LOG.Errorf("gin context http handler failed, err: %v", err)
+		return
+	}
+	defer wsConn.Close()
+
+	id, err := strconv.Atoi(c.Query("id"))
+	if wshandleError(wsConn, errors.WithMessage(err, "invalid param id in request")) {
 		return
 	}
 	cols, err := strconv.Atoi(c.DefaultQuery("cols", "80"))
-	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeErrBadRequest, constant.ErrTypeInvalidParams, err)
+	if wshandleError(wsConn, errors.WithMessage(err, "invalid param cols in request")) {
 		return
 	}
 	rows, err := strconv.Atoi(c.DefaultQuery("rows", "40"))
-	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeErrBadRequest, constant.ErrTypeInvalidParams, err)
+	if wshandleError(wsConn, errors.WithMessage(err, "invalid param rows in request")) {
 		return
 	}
 	host, err := hostService.GetHostInfo(uint(id))
-	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeErrBadRequest, constant.ErrTypeInvalidParams, err)
+	if wshandleError(wsConn, errors.WithMessage(err, "load host info by id failed")) {
 		return
 	}
 	var connInfo ssh.ConnInfo
@@ -49,24 +51,11 @@ func (b *BaseApi) WsSsh(c *gin.Context) {
 		connInfo.PassPhrase = []byte(host.PassPhrase)
 	}
 
-	wsConn, err := upGrader.Upgrade(c.Writer, c.Request, nil)
-	if err != nil {
-		global.LOG.Errorf("gin context http handler failed, err: %v", err)
-		return
-	}
-	defer wsConn.Close()
-
 	client, err := connInfo.NewClient()
 	if wshandleError(wsConn, errors.WithMessage(err, "failed to set up the connection. Please check the host information")) {
 		return
 	}
 	defer client.Close()
-	ssConn, err := connInfo.NewSshConn(cols, rows)
-	if wshandleError(wsConn, err) {
-		return
-	}
-	defer ssConn.Close()
-
 	sws, err := terminal.NewLogicSshWsSession(cols, rows, true, connInfo.Client, wsConn)
 	if wshandleError(wsConn, err) {
 		return
@@ -85,42 +74,62 @@ func (b *BaseApi) WsSsh(c *gin.Context) {
 }
 
 func (b *BaseApi) RedisWsSsh(c *gin.Context) {
-	cols, err := strconv.Atoi(c.DefaultQuery("cols", "80"))
-	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeErrBadRequest, constant.ErrTypeInvalidParams, err)
-		return
-	}
-	rows, err := strconv.Atoi(c.DefaultQuery("rows", "40"))
-	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeErrBadRequest, constant.ErrTypeInvalidParams, err)
-		return
-	}
-	redisConf, err := redisService.LoadConf()
-	if err != nil {
-		global.LOG.Errorf("load redis container failed, err: %v", err)
-		helper.ErrorWithDetail(c, constant.CodeErrInternalServer, constant.ErrTypeInternalServer, err)
-		return
-	}
-
 	wsConn, err := upGrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
 		global.LOG.Errorf("gin context http handler failed, err: %v", err)
 		return
 	}
 	defer wsConn.Close()
-	commands := "redis-cli"
-	if len(redisConf.Requirepass) != 0 {
-		commands = fmt.Sprintf("redis-cli -a %s --no-auth-warning", redisConf.Requirepass)
+
+	if global.CONF.System.IsDemo {
+		if wshandleError(wsConn, errors.New("   demo server, prohibit this operation!")) {
+			return
+		}
 	}
-	pidMap := loadMapFromDockerTop(redisConf.ContainerName)
-	slave, err := terminal.NewCommand(fmt.Sprintf("docker exec -it %s %s", redisConf.ContainerName, commands))
+
+	cols, err := strconv.Atoi(c.DefaultQuery("cols", "80"))
+	if wshandleError(wsConn, errors.WithMessage(err, "invalid param cols in request")) {
+		return
+	}
+	rows, err := strconv.Atoi(c.DefaultQuery("rows", "40"))
+	if wshandleError(wsConn, errors.WithMessage(err, "invalid param rows in request")) {
+		return
+	}
+	name := c.Query("name")
+	from := c.Query("from")
+	commands := []string{"redis-cli"}
+	database, err := databaseService.Get(name)
+	if wshandleError(wsConn, errors.WithMessage(err, "no such database in db")) {
+		return
+	}
+	if from == "local" {
+		redisInfo, err := appInstallService.LoadConnInfo(dto.OperationWithNameAndType{Name: name, Type: "redis"})
+		if wshandleError(wsConn, errors.WithMessage(err, "no such database in db")) {
+			return
+		}
+		name = redisInfo.ContainerName
+		if len(database.Password) != 0 {
+			commands = []string{"redis-cli", "-a", database.Password, "--no-auth-warning"}
+		}
+	} else {
+		itemPort := fmt.Sprintf("%v", database.Port)
+		commands = []string{"redis-cli", "-h", database.Address, "-p", itemPort}
+		if len(database.Password) != 0 {
+			commands = []string{"redis-cli", "-h", database.Address, "-p", itemPort, "-a", database.Password, "--no-auth-warning"}
+		}
+		name = "1Panel-redis-cli-tools"
+	}
+
+	pidMap := loadMapFromDockerTop(name)
+	itemCmds := append([]string{"exec", "-it", name}, commands...)
+	slave, err := terminal.NewCommand(itemCmds)
 	if wshandleError(wsConn, err) {
 		return
 	}
-	defer killBash(redisConf.ContainerName, commands, pidMap)
+	defer killBash(name, strings.Join(commands, " "), pidMap)
 	defer slave.Close()
 
-	tty, err := terminal.NewLocalWsSession(cols, rows, wsConn, slave)
+	tty, err := terminal.NewLocalWsSession(cols, rows, wsConn, slave, false)
 	if wshandleError(wsConn, err) {
 		return
 	}
@@ -138,24 +147,6 @@ func (b *BaseApi) RedisWsSsh(c *gin.Context) {
 }
 
 func (b *BaseApi) ContainerWsSsh(c *gin.Context) {
-	containerID := c.Query("containerid")
-	command := c.Query("command")
-	user := c.Query("user")
-	if len(command) == 0 || len(containerID) == 0 {
-		helper.ErrorWithDetail(c, constant.CodeErrBadRequest, constant.ErrTypeInvalidParams, errors.New("error param of command or containerID"))
-		return
-	}
-	cols, err := strconv.Atoi(c.DefaultQuery("cols", "80"))
-	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeErrBadRequest, constant.ErrTypeInvalidParams, err)
-		return
-	}
-	rows, err := strconv.Atoi(c.DefaultQuery("rows", "40"))
-	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeErrBadRequest, constant.ErrTypeInvalidParams, err)
-		return
-	}
-
 	wsConn, err := upGrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
 		global.LOG.Errorf("gin context http handler failed, err: %v", err)
@@ -163,18 +154,46 @@ func (b *BaseApi) ContainerWsSsh(c *gin.Context) {
 	}
 	defer wsConn.Close()
 
-	cmds := fmt.Sprintf("docker exec %s %s", containerID, command)
-	if len(user) != 0 {
-		cmds = fmt.Sprintf("docker exec -u %s %s %s", user, containerID, command)
+	if global.CONF.System.IsDemo {
+		if wshandleError(wsConn, errors.New("   demo server, prohibit this operation!")) {
+			return
+		}
 	}
-	stdout, err := cmd.Exec(cmds)
+
+	containerID := c.Query("containerid")
+	command := c.Query("command")
+	user := c.Query("user")
+	if len(command) == 0 || len(containerID) == 0 {
+		if wshandleError(wsConn, errors.New("error param of command or containerID")) {
+			return
+		}
+	}
+	cols, err := strconv.Atoi(c.DefaultQuery("cols", "80"))
+	if wshandleError(wsConn, errors.WithMessage(err, "invalid param cols in request")) {
+		return
+	}
+	rows, err := strconv.Atoi(c.DefaultQuery("rows", "40"))
+	if wshandleError(wsConn, errors.WithMessage(err, "invalid param rows in request")) {
+		return
+	}
+
+	cmds := []string{"exec", containerID, command}
+	if len(user) != 0 {
+		cmds = []string{"exec", "-u", user, containerID, command}
+	}
+	if cmd.CheckIllegal(user, containerID, command) {
+		if wshandleError(wsConn, errors.New("  The command contains illegal characters.")) {
+			return
+		}
+	}
+	stdout, err := cmd.ExecWithCheck("docker", cmds...)
 	if wshandleError(wsConn, errors.WithMessage(err, stdout)) {
 		return
 	}
 
-	commands := fmt.Sprintf("docker exec -it %s %s", containerID, command)
+	commands := []string{"exec", "-it", containerID, command}
 	if len(user) != 0 {
-		commands = fmt.Sprintf("docker exec -it -u %s %s %s", user, containerID, command)
+		commands = []string{"exec", "-it", "-u", user, containerID, command}
 	}
 	pidMap := loadMapFromDockerTop(containerID)
 	slave, err := terminal.NewCommand(commands)
@@ -184,7 +203,7 @@ func (b *BaseApi) ContainerWsSsh(c *gin.Context) {
 	defer killBash(containerID, command, pidMap)
 	defer slave.Close()
 
-	tty, err := terminal.NewLocalWsSession(cols, rows, wsConn, slave)
+	tty, err := terminal.NewLocalWsSession(cols, rows, wsConn, slave, true)
 	if wshandleError(wsConn, err) {
 		return
 	}
@@ -232,10 +251,10 @@ func loadMapFromDockerTop(containerID string) map[string]string {
 	lines := strings.Split(stdout, "\n")
 	for _, line := range lines {
 		parts := strings.Fields(line)
-		if len(parts) != 2 {
+		if len(parts) < 2 {
 			continue
 		}
-		pidMap[parts[0]] = parts[1]
+		pidMap[parts[0]] = strings.Join(parts[1:], " ")
 	}
 	return pidMap
 }

@@ -8,7 +8,7 @@ import (
 
 type SettingRouter struct{}
 
-func (s *SettingRouter) InitSettingRouter(Router *gin.RouterGroup) {
+func (s *SettingRouter) InitRouter(Router *gin.RouterGroup) {
 	router := Router.Group("settings").
 		Use(middleware.JwtAuth()).
 		Use(middleware.SessionAuth())
@@ -22,18 +22,22 @@ func (s *SettingRouter) InitSettingRouter(Router *gin.RouterGroup) {
 		router.POST("/expired/handle", baseApi.HandlePasswordExpired)
 		settingRouter.GET("/search/available", baseApi.GetSystemAvailable)
 		settingRouter.POST("/update", baseApi.UpdateSetting)
+		settingRouter.GET("/interface", baseApi.LoadInterfaceAddr)
+		settingRouter.POST("/menu/update", baseApi.UpdateMenu)
+		settingRouter.POST("/proxy/update", baseApi.UpdateProxy)
+		settingRouter.POST("/bind/update", baseApi.UpdateBindInfo)
 		settingRouter.POST("/port/update", baseApi.UpdatePort)
 		settingRouter.POST("/ssl/update", baseApi.UpdateSSL)
 		settingRouter.GET("/ssl/info", baseApi.LoadFromCert)
+		settingRouter.POST("/ssl/download", baseApi.DownloadSSL)
 		settingRouter.POST("/password/update", baseApi.UpdatePassword)
-		settingRouter.GET("/time/option", baseApi.LoadTimeZone)
-		settingRouter.POST("/time/sync", baseApi.SyncTime)
-		settingRouter.POST("/monitor/clean", baseApi.CleanMonitor)
-		settingRouter.GET("/mfa", baseApi.GetMFA)
+		settingRouter.POST("/mfa", baseApi.LoadMFA)
 		settingRouter.POST("/mfa/bind", baseApi.MFABind)
 
 		settingRouter.POST("/snapshot", baseApi.CreateSnapshot)
+		settingRouter.POST("/snapshot/status", baseApi.LoadSnapShotStatus)
 		settingRouter.POST("/snapshot/search", baseApi.SearchSnapshot)
+		settingRouter.POST("/snapshot/size", baseApi.LoadSnapshotSize)
 		settingRouter.POST("/snapshot/import", baseApi.ImportSnapshot)
 		settingRouter.POST("/snapshot/del", baseApi.DeleteSnapshot)
 		settingRouter.POST("/snapshot/recover", baseApi.RecoverSnapshot)
@@ -41,7 +45,9 @@ func (s *SettingRouter) InitSettingRouter(Router *gin.RouterGroup) {
 		settingRouter.POST("/snapshot/description/update", baseApi.UpdateSnapDescription)
 
 		settingRouter.GET("/backup/search", baseApi.ListBackup)
+		settingRouter.GET("/backup/onedrive", baseApi.LoadOneDriveInfo)
 		settingRouter.POST("/backup/backup", baseApi.Backup)
+		settingRouter.POST("/backup/refresh/onedrive", baseApi.RefreshOneDriveToken)
 		settingRouter.POST("/backup/recover", baseApi.Recover)
 		settingRouter.POST("/backup/recover/byupload", baseApi.RecoverByUpload)
 		settingRouter.POST("/backup/search/files", baseApi.LoadFilesFromBackup)
@@ -50,6 +56,9 @@ func (s *SettingRouter) InitSettingRouter(Router *gin.RouterGroup) {
 		settingRouter.POST("/backup/del", baseApi.DeleteBackup)
 		settingRouter.POST("/backup/update", baseApi.UpdateBackup)
 		settingRouter.POST("/backup/record/search", baseApi.SearchBackupRecords)
+		settingRouter.POST("/backup/record/size", baseApi.LoadBackupSize)
+		settingRouter.POST("/backup/record/search/bycronjob", baseApi.SearchBackupRecordsByCronjob)
+		settingRouter.POST("/backup/record/size/bycronjob", baseApi.LoadBackupSizeByCronjob)
 		settingRouter.POST("/backup/record/download", baseApi.DownloadRecord)
 		settingRouter.POST("/backup/record/del", baseApi.DeleteBackupRecord)
 
@@ -57,5 +66,7 @@ func (s *SettingRouter) InitSettingRouter(Router *gin.RouterGroup) {
 		settingRouter.POST("/upgrade/notes", baseApi.GetNotesByVersion)
 		settingRouter.GET("/upgrade", baseApi.GetUpgradeInfo)
 		settingRouter.GET("/basedir", baseApi.LoadBaseDir)
+		settingRouter.POST("/api/config/generate/key", baseApi.GenerateApiKey)
+		settingRouter.POST("/api/config/update", baseApi.UpdateApiConfig)
 	}
 }

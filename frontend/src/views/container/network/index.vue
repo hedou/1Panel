@@ -6,10 +6,10 @@
             <span>{{ $t('container.startIn') }}</span>
         </el-card>
 
-        <LayoutContent :title="$t('container.network')" :class="{ mask: dockerStatus != 'Running' }">
+        <LayoutContent :title="$t('container.network', 2)" :class="{ mask: dockerStatus != 'Running' }">
             <template #toolbar>
-                <el-row>
-                    <el-col :span="16">
+                <div class="flex justify-between gap-2 flex-wrap sm:flex-row">
+                    <div class="flex flex-wrap gap-3">
                         <el-button type="primary" @click="onCreate()">
                             {{ $t('container.createNetwork') }}
                         </el-button>
@@ -19,22 +19,12 @@
                         <el-button :disabled="selects.length === 0" @click="batchDelete(null)">
                             {{ $t('commons.button.delete') }}
                         </el-button>
-                    </el-col>
-                    <el-col :span="8">
+                    </div>
+                    <div class="flex flex-wrap gap-3">
                         <TableSetting @search="search()" />
-                        <div class="search-button">
-                            <el-input
-                                v-model="searchName"
-                                clearable
-                                @clear="search()"
-                                suffix-icon="Search"
-                                @keyup.enter="search()"
-                                @change="search()"
-                                :placeholder="$t('commons.button.search')"
-                            ></el-input>
-                        </div>
-                    </el-col>
-                </el-row>
+                        <TableSearch @search="search()" v-model:searchName="searchName" />
+                    </div>
+                </div>
             </template>
             <template #main>
                 <ComplexTable
@@ -44,20 +34,28 @@
                     @search="search"
                 >
                     <el-table-column type="selection" :selectable="selectable" fix />
-                    <el-table-column :label="$t('commons.table.name')" min-width="80" prop="name" fix>
+                    <el-table-column
+                        :label="$t('commons.table.name')"
+                        width="130"
+                        prop="name"
+                        fix
+                        show-overflow-tooltip
+                    >
                         <template #default="{ row }">
-                            <Tooltip @click="onInspect(row.id)" :text="row.name" />
+                            <el-text type="primary" class="cursor-pointer" @click="onInspect(row.id)">
+                                {{ row.name }}
+                            </el-text>
                         </template>
                     </el-table-column>
-                    <el-table-column min-width="50">
+                    <el-table-column width="90">
                         <template #default="{ row }">
-                            <el-tag effect="dark" round v-if="row.isSystem">system</el-tag>
+                            <el-tag round v-if="row.isSystem || row.name === '1panel-network'">system</el-tag>
                         </template>
                     </el-table-column>
                     <el-table-column
                         :label="$t('container.driver')"
                         show-overflow-tooltip
-                        min-width="40"
+                        min-width="60"
                         prop="driver"
                     />
                     <el-table-column :label="$t('container.subnet')" min-width="80" prop="subnet" fix />
@@ -66,11 +64,11 @@
                         <template #default="{ row }">
                             <div v-for="(item, index) in row.labels" :key="index">
                                 <div v-if="row.expand || (!row.expand && index < 3)">
-                                    <el-tag>{{ item }}</el-tag>
+                                    <el-tag type="info">{{ item }}</el-tag>
                                 </div>
                             </div>
                             <div v-if="!row.expand && row.labels.length > 3">
-                                <el-button type="primary" link @click="row.expand = true">
+                                <el-button link @click="row.expand = true">
                                     {{ $t('commons.button.expand') }}...
                                 </el-button>
                             </div>
@@ -78,23 +76,23 @@
                     </el-table-column>
                     <el-table-column
                         prop="createdAt"
+                        show-overflow-tooltip
                         min-width="90"
                         :label="$t('commons.table.date')"
                         :formatter="dateFormat"
                     />
-                    <fu-table-operations :buttons="buttons" :label="$t('commons.table.operate')" fix />
+                    <fu-table-operations width="100" :buttons="buttons" :label="$t('commons.table.operate')" fix />
                 </ComplexTable>
             </template>
         </LayoutContent>
 
+        <OpDialog ref="opRef" @search="search" />
         <CodemirrorDialog ref="codemirror" />
         <CreateDialog @search="search" ref="dialogCreateRef" />
     </div>
 </template>
 
 <script lang="ts" setup>
-import Tooltip from '@/components/tooltip/index.vue';
-import TableSetting from '@/components/table-setting/index.vue';
 import CreateDialog from '@/views/container/network/create/index.vue';
 import CodemirrorDialog from '@/components/codemirror-dialog/index.vue';
 import { reactive, onMounted, ref } from 'vue';
@@ -102,24 +100,24 @@ import { dateFormat } from '@/utils/util';
 import { deleteNetwork, searchNetwork, inspect, loadDockerStatus, containerPrune } from '@/api/modules/container';
 import { Container } from '@/api/interface/container';
 import i18n from '@/lang';
-import { useDeleteData } from '@/hooks/use-delete-data';
 import router from '@/routers';
 import { ElMessageBox } from 'element-plus';
 import { MsgSuccess } from '@/utils/message';
 
 const loading = ref();
-
-const detailInfo = ref();
 const codemirror = ref();
 
 const data = ref();
 const selects = ref<any>([]);
 const paginationConfig = reactive({
+    cacheSizeKey: 'container-network-page-size',
     currentPage: 1,
     pageSize: 10,
     total: 0,
 });
 const searchName = ref();
+
+const opRef = ref();
 
 const dockerStatus = ref('Running');
 const loadStatus = async () => {
@@ -200,29 +198,46 @@ const search = async () => {
 
 const batchDelete = async (row: Container.NetworkInfo | null) => {
     let names: Array<string> = [];
+    let hasPanelNetwork;
     if (row === null) {
         selects.value.forEach((item: Container.NetworkInfo) => {
+            if (item.name === '1panel-network') {
+                hasPanelNetwork = true;
+            }
             names.push(item.name);
         });
     } else {
+        if (row.name === '1panel-network') {
+            hasPanelNetwork = true;
+        }
         names.push(row.name);
     }
-    await useDeleteData(deleteNetwork, { names: names }, 'commons.msg.delete');
-    search();
+    opRef.value.acceptParams({
+        title: i18n.global.t('commons.button.delete'),
+        names: names,
+        msg: hasPanelNetwork
+            ? i18n.global.t('container.networkHelper')
+            : i18n.global.t('commons.msg.operatorHelper', [
+                  i18n.global.t('container.network'),
+                  i18n.global.t('commons.button.delete'),
+              ]),
+        api: deleteNetwork,
+        params: { names: names },
+    });
 };
 
 const onInspect = async (id: string) => {
     const res = await inspect({ id: id, type: 'network' });
-    detailInfo.value = JSON.stringify(JSON.parse(res.data), null, 2);
+    let detailInfo = JSON.stringify(JSON.parse(res.data), null, 2);
     let param = {
         header: i18n.global.t('commons.button.view'),
-        detailInfo: detailInfo.value,
+        detailInfo: detailInfo,
     };
     codemirror.value!.acceptParams(param);
 };
 
 function isSystem(val: string) {
-    return val === 'bridge' || val === '1panel-network' || val === 'none' || val === 'host';
+    return val === 'bridge' || val === 'none' || val === 'host';
 }
 
 const buttons = [

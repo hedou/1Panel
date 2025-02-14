@@ -1,6 +1,12 @@
 <template>
     <div>
-        <el-drawer v-model="drawerVisiable" :destroy-on-close="true" :close-on-click-modal="false" size="30%">
+        <el-drawer
+            v-model="drawerVisible"
+            :destroy-on-close="true"
+            :close-on-click-modal="false"
+            :close-on-press-escape="false"
+            size="30%"
+        >
             <template #header>
                 <DrawerHeader :header="$t('setting.bindDomain')" :back="handleClose" />
             </template>
@@ -23,7 +29,7 @@
             </el-form>
             <template #footer>
                 <span class="dialog-footer">
-                    <el-button @click="drawerVisiable = false">{{ $t('commons.button.cancel') }}</el-button>
+                    <el-button @click="drawerVisible = false">{{ $t('commons.button.cancel') }}</el-button>
                     <el-button :disabled="loading" type="primary" @click="onSavePort(formRef)">
                         {{ $t('commons.button.confirm') }}
                     </el-button>
@@ -45,7 +51,7 @@ const emit = defineEmits<{ (e: 'search'): void }>();
 interface DialogProps {
     bindDomain: string;
 }
-const drawerVisiable = ref();
+const drawerVisible = ref();
 const loading = ref();
 
 const form = reactive({
@@ -70,7 +76,7 @@ const formRef = ref<FormInstance>();
 
 const acceptParams = (params: DialogProps): void => {
     form.bindDomain = params.bindDomain;
-    drawerVisiable.value = true;
+    drawerVisible.value = true;
 };
 
 const onSavePort = async (formEl: FormInstance | undefined) => {
@@ -109,7 +115,7 @@ const onSavePort = async (formEl: FormInstance | undefined) => {
 };
 
 const handleClose = () => {
-    drawerVisiable.value = false;
+    drawerVisible.value = false;
 };
 
 defineExpose({

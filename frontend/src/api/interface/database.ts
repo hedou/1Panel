@@ -1,6 +1,14 @@
 import { ReqPage } from '.';
 
 export namespace Database {
+    export interface SearchDBWithPage {
+        info: string;
+        database: string;
+        page: number;
+        pageSize: number;
+        orderBy?: string;
+        order?: string;
+    }
     export interface SearchBackupRecord extends ReqPage {
         mysqlName: string;
         dbName: string;
@@ -9,10 +17,13 @@ export namespace Database {
         id: number;
         createdAt: Date;
         name: string;
+        mysqlName: string;
+        from: string;
         format: string;
         username: string;
         password: string;
         permission: string;
+        isDelete: string;
         description: string;
     }
     export interface BaseInfo {
@@ -23,20 +34,45 @@ export namespace Database {
         mysqlKey: string;
         containerName: string;
     }
-    export interface MysqlConfUpdateByFile {
-        mysqlName: string;
+    export interface DBConfUpdate {
+        type: string;
+        database: string;
         file: string;
     }
     export interface MysqlDBCreate {
         name: string;
+        from: string;
+        database: string;
         format: string;
         username: string;
         password: string;
         permission: string;
         description: string;
     }
+
+    export interface BindUser {
+        database: string;
+        db: string;
+        username: string;
+        password: string;
+        permission: string;
+    }
+
+    export interface MysqlLoadDB {
+        from: string;
+        type: string;
+        database: string;
+    }
+    export interface MysqlDBDeleteCheck {
+        id: number;
+        type: string;
+        database: string;
+    }
+
     export interface MysqlDBDelete {
         id: number;
+        type: string;
+        database: string;
         forceDelete: boolean;
         deleteBackup: boolean;
     }
@@ -61,6 +97,11 @@ export namespace Database {
         long_query_time: number;
     }
     export interface VariablesUpdate {
+        type: string;
+        database: string;
+        variables: Array<VariablesUpdateHelper>;
+    }
+    export interface VariablesUpdateHelper {
         param: string;
         value: any;
     }
@@ -101,26 +142,96 @@ export namespace Database {
         File: string;
         Position: number;
     }
+    export interface PgLoadDB {
+        from: string;
+        type: string;
+        database: string;
+    }
+    export interface PgBind {
+        name: string;
+        database: string;
+        username: string;
+        password: string;
+        superUser: boolean;
+    }
+    export interface PgChangePrivileges {
+        name: string;
+        database: string;
+        username: string;
+        superUser: boolean;
+    }
+    export interface PostgresqlDBDelete {
+        id: number;
+        type: string;
+        database: string;
+        forceDelete: boolean;
+        deleteBackup: boolean;
+    }
+    export interface PostgresqlDBDeleteCheck {
+        id: number;
+        type: string;
+        database: string;
+    }
+    export interface PostgresqlDBInfo {
+        id: number;
+        createdAt: Date;
+        name: string;
+        postgresqlName: string;
+        from: string;
+        format: string;
+        username: string;
+        password: string;
+        description: string;
+    }
+    export interface PostgresqlConfUpdateByFile {
+        type: string;
+        database: string;
+        file: string;
+    }
+    export interface PostgresqlDBCreate {
+        name: string;
+        from: string;
+        database: string;
+        format: string;
+        username: string;
+        password: string;
+        superUser: boolean;
+        description: string;
+    }
+    export interface PostgresqlDBInfo {
+        id: number;
+        createdAt: Date;
+        name: string;
+        mysqlName: string;
+        from: string;
+        format: string;
+        username: string;
+        password: string;
+        superUser: boolean;
+        isDelete: string;
+        description: string;
+    }
     export interface ChangeInfo {
         id: number;
+        from: string;
+        type: string;
+        database: string;
         value: string;
     }
 
     // redis
     export interface RedisConfUpdate {
+        database: string;
         timeout: string;
         maxclients: string;
         maxmemory: string;
     }
     export interface RedisConfPersistenceUpdate {
+        database: string;
         type: string;
         appendonly: string;
         appendfsync: string;
         save: string;
-    }
-    export interface RedisConfUpdateByFile {
-        file: string;
-        restartNow: boolean;
     }
     export interface RedisStatus {
         tcp_port: string;
@@ -150,14 +261,87 @@ export namespace Database {
         appendfsync: string;
         save: string;
     }
-    export interface FileRecord {
-        fileName: string;
-        fileDir: string;
-        createdAt: string;
-        size: string;
+
+    // remote
+    export interface DatabaseInfo {
+        id: number;
+        createdAt: Date;
+        name: string;
+        type: string;
+        version: string;
+        from: string;
+        address: string;
+        port: number;
+        username: string;
+        password: string;
+
+        ssl: boolean;
+        hasCA: boolean;
+        rootCert: string;
+        clientKey: string;
+        clientCert: string;
+        skipVerify: boolean;
+
+        description: string;
     }
-    export interface RedisRecover {
-        fileName: string;
-        fileDir: string;
+    export interface SearchDatabasePage {
+        info: string;
+        type: string;
+        page: number;
+        pageSize: number;
+        orderBy?: string;
+        order?: string;
+    }
+    export interface DatabaseOption {
+        id: number;
+        from: string;
+        type: string;
+        database: string;
+        version: string;
+        address: string;
+    }
+    export interface DbItem {
+        id: number;
+        from: string;
+        database: string;
+        name: string;
+    }
+    export interface DatabaseCreate {
+        name: string;
+        version: string;
+        from: string;
+        address: string;
+        port: number;
+        username: string;
+        password: string;
+
+        ssl: boolean;
+        rootCert: string;
+        clientKey: string;
+        clientCert: string;
+        skipVerify: boolean;
+
+        description: string;
+    }
+    export interface DatabaseUpdate {
+        id: number;
+        version: string;
+        address: string;
+        port: number;
+        username: string;
+        password: string;
+
+        ssl: boolean;
+        rootCert: string;
+        clientKey: string;
+        clientCert: string;
+        skipVerify: boolean;
+
+        description: string;
+    }
+    export interface DatabaseDelete {
+        id: number;
+        forceDelete: boolean;
+        deleteBackup: boolean;
     }
 }

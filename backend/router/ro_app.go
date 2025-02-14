@@ -9,7 +9,7 @@ import (
 type AppRouter struct {
 }
 
-func (a *AppRouter) InitAppRouter(Router *gin.RouterGroup) {
+func (a *AppRouter) InitRouter(Router *gin.RouterGroup) {
 	appRouter := Router.Group("apps")
 	appRouter.Use(middleware.JwtAuth()).Use(middleware.SessionAuth()).Use(middleware.PasswordExpired())
 
@@ -23,18 +23,21 @@ func (a *AppRouter) InitAppRouter(Router *gin.RouterGroup) {
 		appRouter.GET("/details/:id", baseApi.GetAppDetailByID)
 		appRouter.POST("/install", baseApi.InstallApp)
 		appRouter.GET("/tags", baseApi.GetAppTags)
-		appRouter.GET("/installed/:appInstallId/versions", baseApi.GetUpdateVersions)
-		appRouter.GET("/installed/check/:key", baseApi.CheckAppInstalled)
-		appRouter.GET("/installed/loadport/:key", baseApi.LoadPort)
-		appRouter.GET("/installed/conninfo/:key", baseApi.LoadConnInfo)
+		appRouter.POST("/installed/check", baseApi.CheckAppInstalled)
+		appRouter.POST("/installed/loadport", baseApi.LoadPort)
+		appRouter.POST("/installed/conninfo", baseApi.LoadConnInfo)
 		appRouter.GET("/installed/delete/check/:appInstallId", baseApi.DeleteCheck)
 		appRouter.POST("/installed/search", baseApi.SearchAppInstalled)
+		appRouter.GET("/installed/list", baseApi.ListAppInstalled)
 		appRouter.POST("/installed/op", baseApi.OperateInstalled)
 		appRouter.POST("/installed/sync", baseApi.SyncInstalled)
 		appRouter.POST("/installed/port/change", baseApi.ChangeAppPort)
 		appRouter.GET("/services/:key", baseApi.GetServices)
-		appRouter.GET("/installed/conf/:key", baseApi.GetDefaultConfig)
+		appRouter.POST("/installed/conf", baseApi.GetDefaultConfig)
 		appRouter.GET("/installed/params/:appInstallId", baseApi.GetParams)
 		appRouter.POST("/installed/params/update", baseApi.UpdateInstalled)
+		appRouter.POST("/installed/ignore", baseApi.IgnoreUpgrade)
+		appRouter.GET("/ignored/detail", baseApi.GetIgnoredApp)
+		appRouter.POST("/installed/update/versions", baseApi.GetUpdateVersions)
 	}
 }

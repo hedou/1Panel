@@ -4,9 +4,23 @@
 *.dll
 *.so
 *.dylib
-.idea
-
 build/1panel
+
+# Mac
+.DS_Store
+*/.DS_Store
+
+# VS Code
+.vscode
+*.project
+*.factorypath
+
+# IntelliJ IDEA
+.idea/*
+!.idea/icon.png
+*.iws
+*.iml
+*.ipr
 
 # Test binary, built with `go test -c`
 *.test
@@ -14,8 +28,7 @@ build/1panel
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
 
-# Dependency directories (remove the comment below to include it)
-# vendor/
+# Dependency directories
 /pkg/
 backend/__debug_bin
 cmd/server/__debug_bin
@@ -24,11 +37,15 @@ cmd/server/web/monacoeditorwork
 cmd/server/web/index.html
 frontend/auto-imports.d.ts
 frontend/components.d.ts
-
+frontend/src/xpack
+backend/xpack
+*_xpack.go
 .history/
 dist/
 1pctl
 1panel.service
 install.sh
-cmd/server/web/.DS_Store
-cmd/server/.DS_Store
+quick_start.sh
+cmd/server/fileList.txt
+.fileList.txt
+1Panel.code-workspace

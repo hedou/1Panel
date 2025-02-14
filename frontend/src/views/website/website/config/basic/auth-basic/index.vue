@@ -5,7 +5,7 @@
     <ComplexTable :data="data" @search="search" v-loading="loading">
         <template #toolbar>
             <el-button type="primary" plain @click="openCreate">
-                {{ $t('commons.button.create') + $t('website.basicAuth') }}
+                {{ $t('commons.button.create') }}
             </el-button>
         </template>
         <el-table-column :label="$t('commons.login.username')" prop="username"></el-table-column>
@@ -20,6 +20,8 @@
         />
     </ComplexTable>
     <Create ref="createRef" @close="search()" />
+
+    <OpDialog ref="opRef" @search="search" />
 </template>
 
 <script lang="ts" setup name="proxy">
@@ -28,7 +30,6 @@ import { OperateAuthConfig, GetAuthConfig } from '@/api/modules/website';
 import { computed, onMounted, ref } from 'vue';
 import i18n from '@/lang';
 import Create from './create/index.vue';
-import { useDeleteData } from '@/hooks/use-delete-data';
 import { MsgSuccess } from '@/utils/message';
 import { GlobalStore } from '@/store';
 const globalStore = GlobalStore();
@@ -49,6 +50,7 @@ const loading = ref(false);
 const data = ref([]);
 const createRef = ref();
 const enable = ref(false);
+const opRef = ref();
 
 const buttons = [
     {
@@ -87,8 +89,16 @@ const openEdit = (authConfig: Website.NginxAuthConfig) => {
 const deleteAuth = async (authConfig: Website.NginxAuthConfig) => {
     authConfig.operate = 'delete';
     authConfig.websiteID = id.value;
-    await useDeleteData(OperateAuthConfig, authConfig, 'commons.msg.delete');
-    search();
+    opRef.value.acceptParams({
+        title: i18n.global.t('commons.button.delete'),
+        names: [authConfig.username],
+        msg: i18n.global.t('commons.msg.operatorHelper', [
+            i18n.global.t('website.basicAuth'),
+            i18n.global.t('commons.button.delete'),
+        ]),
+        api: OperateAuthConfig,
+        params: authConfig,
+    });
 };
 
 const changeEnable = () => {

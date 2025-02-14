@@ -15,24 +15,27 @@ import (
 	"github.com/shirou/gopsutil/v3/net"
 )
 
+// @Tags Monitor
+// @Summary Load monitor datas
+// @Param request body dto.MonitorSearch true "request"
+// @Success 200 {array} dto.MonitorData
+// @Security ApiKeyAuth
+// @Security Timestamp
+// @Router /hosts/monitor/search [post]
 func (b *BaseApi) LoadMonitor(c *gin.Context) {
 	var req dto.MonitorSearch
-	if err := c.ShouldBindJSON(&req); err != nil {
-		helper.ErrorWithDetail(c, constant.CodeErrBadRequest, constant.ErrTypeInvalidParams, err)
+	if err := helper.CheckBindAndValidate(&req, c); err != nil {
 		return
 	}
-	if err := global.VALID.Struct(req); err != nil {
-		helper.ErrorWithDetail(c, constant.CodeErrBadRequest, constant.ErrTypeInvalidParams, err)
-		return
-	}
-	loc, _ := time.LoadLocation(common.LoadTimeZone())
+
+	loc, _ := time.LoadLocation(common.LoadTimeZoneByCmd())
 	req.StartTime = req.StartTime.In(loc)
 	req.EndTime = req.EndTime.In(loc)
 
 	var backdatas []dto.MonitorData
 	if req.Param == "all" || req.Param == "cpu" || req.Param == "memory" || req.Param == "load" {
 		var bases []model.MonitorBase
-		if err := global.DB.
+		if err := global.MonitorDB.
 			Where("created_at > ? AND created_at < ?", req.StartTime, req.EndTime).
 			Find(&bases).Error; err != nil {
 			helper.ErrorWithDetail(c, constant.CodeErrInternalServer, constant.ErrTypeInternalServer, err)
@@ -49,7 +52,7 @@ func (b *BaseApi) LoadMonitor(c *gin.Context) {
 	}
 	if req.Param == "all" || req.Param == "io" {
 		var bases []model.MonitorIO
-		if err := global.DB.
+		if err := global.MonitorDB.
 			Where("created_at > ? AND created_at < ?", req.StartTime, req.EndTime).
 			Find(&bases).Error; err != nil {
 			helper.ErrorWithDetail(c, constant.CodeErrInternalServer, constant.ErrTypeInternalServer, err)
@@ -66,7 +69,7 @@ func (b *BaseApi) LoadMonitor(c *gin.Context) {
 	}
 	if req.Param == "all" || req.Param == "network" {
 		var bases []model.MonitorNetwork
-		if err := global.DB.
+		if err := global.MonitorDB.
 			Where("name = ? AND created_at > ? AND created_at < ?", req.Info, req.StartTime, req.EndTime).
 			Find(&bases).Error; err != nil {
 			helper.ErrorWithDetail(c, constant.CodeErrInternalServer, constant.ErrTypeInternalServer, err)
@@ -82,6 +85,30 @@ func (b *BaseApi) LoadMonitor(c *gin.Context) {
 		backdatas = append(backdatas, itemData)
 	}
 	helper.SuccessWithData(c, backdatas)
+}
+
+// @Tags Monitor
+// @Summary Clean monitor datas
+// @Success 200
+// @Security ApiKeyAuth
+// @Security Timestamp
+// @Router /hosts/monitor/clean [post]
+// @x-panel-log {"bodyKeys":[],"paramKeys":[],"BeforeFunctions":[],"formatZH":"清空监控数据","formatEN":"clean monitor datas"}
+func (b *BaseApi) CleanMonitor(c *gin.Context) {
+	if err := global.MonitorDB.Exec("DELETE FROM monitor_bases").Error; err != nil {
+		helper.ErrorWithDetail(c, constant.CodeErrInternalServer, constant.ErrTypeInternalServer, err)
+		return
+	}
+	if err := global.MonitorDB.Exec("DELETE FROM monitor_ios").Error; err != nil {
+		helper.ErrorWithDetail(c, constant.CodeErrInternalServer, constant.ErrTypeInternalServer, err)
+		return
+	}
+	if err := global.MonitorDB.Exec("DELETE FROM monitor_networks").Error; err != nil {
+		helper.ErrorWithDetail(c, constant.CodeErrInternalServer, constant.ErrTypeInternalServer, err)
+		return
+	}
+
+	helper.SuccessWithData(c, nil)
 }
 
 func (b *BaseApi) GetNetworkOptions(c *gin.Context) {

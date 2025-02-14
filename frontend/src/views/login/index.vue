@@ -1,10 +1,10 @@
 <template>
     <div>
-        <div class="login-backgroud">
+        <div class="login-background" v-loading="loading">
             <div class="login-wrapper">
                 <div :class="screenWidth > 1110 ? 'left inline-block' : ''">
                     <div class="login-title">
-                        <span>{{ $t('commons.login.title') }}</span>
+                        <span>{{ gStore.themeConfig.title || $t('setting.description') }}</span>
                     </div>
                     <img src="@/assets/images/1panel-login.png" alt="" v-if="screenWidth > 1110" />
                 </div>
@@ -19,25 +19,16 @@
 </template>
 
 <script setup lang="ts" name="login">
-import { checkIsSafety } from '@/api/modules/auth';
 import LoginForm from './components/login-form.vue';
 import { ref, onMounted } from 'vue';
-import router from '@/routers';
 import { GlobalStore } from '@/store';
 
-const globalStore = GlobalStore();
+const gStore = GlobalStore();
+const loading = ref();
 
 const screenWidth = ref(null);
 
-const getStatus = async () => {
-    const res = await checkIsSafety(globalStore.entrance);
-    if (res.data === 'unpass') {
-        router.replace({ name: 'entrance' });
-    }
-};
-
 onMounted(() => {
-    getStatus();
     screenWidth.value = document.body.clientWidth;
     window.onresize = () => {
         return (() => {
@@ -54,7 +45,7 @@ onMounted(() => {
     align-items: center;
 }
 
-.login-backgroud {
+.login-background {
     height: 100vh;
     background: url(@/assets/images/1panel-login-bg.png) no-repeat,
         radial-gradient(153.25% 257.2% at 118.99% 181.67%, rgba(50, 132, 255, 0.2) 0%, rgba(82, 120, 255, 0) 100%)
@@ -100,9 +91,9 @@ onMounted(() => {
             font-size: 40px;
             font-family: pingFangSC-Regular;
             font-weight: 600;
-            // @media only screen and (max-width: 1440px) {
-            //     margin-left: 0;
-            // }
+            @media only screen and (max-width: 768px) {
+                font-size: 35px;
+            }
         }
         @media only screen and (max-width: 1110px) {
             margin-bottom: 20px;
@@ -124,6 +115,10 @@ onMounted(() => {
         }
         @media only screen and (max-width: 1110px) {
             margin: 60px auto 0;
+        }
+
+        @media only screen and (max-width: 768px) {
+            width: 100%;
         }
     }
 }

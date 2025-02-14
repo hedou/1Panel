@@ -3,12 +3,13 @@ package service
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
-	"path"
 	"strings"
 	"time"
 
 	"github.com/1Panel-dev/1Panel/backend/app/dto"
+	"github.com/1Panel-dev/1Panel/backend/buserr"
 	"github.com/1Panel-dev/1Panel/backend/constant"
 	"github.com/1Panel-dev/1Panel/backend/global"
 	"github.com/1Panel-dev/1Panel/backend/utils/cmd"
@@ -76,17 +77,26 @@ func (u *ImageRepoService) List() ([]dto.ImageRepoOption, error) {
 }
 
 func (u *ImageRepoService) Create(req dto.ImageRepoCreate) error {
+	if cmd.CheckIllegal(req.Username, req.Password, req.DownloadUrl) {
+		return buserr.New(constant.ErrCmdIllegal)
+	}
 	imageRepo, _ := imageRepoRepo.Get(commonRepo.WithByName(req.Name))
 	if imageRepo.ID != 0 {
 		return constant.ErrRecordExist
 	}
+
 	if req.Protocol == "http" {
-		_ = u.handleRegistries(req.DownloadUrl, "", "create")
-		stdout, err := cmd.Exec("systemctl restart docker")
-		if err != nil {
-			return errors.New(string(stdout))
+		if err := u.handleRegistries(req.DownloadUrl, "", "create"); err != nil {
+			return fmt.Errorf("create registry %s failed, err: %v", req.DownloadUrl, err)
+		}
+		if err := validateDockerConfig(); err != nil {
+			return err
+		}
+		if err := restartDocker(); err != nil {
+			return err
 		}
 		ticker := time.NewTicker(3 * time.Second)
+		defer ticker.Stop()
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*20)
 		if err := func() error {
 			for range ticker.C {
@@ -107,23 +117,18 @@ func (u *ImageRepoService) Create(req dto.ImageRepoCreate) error {
 			return err
 		}
 	}
+	if req.Auth {
+		if err := u.CheckConn(req.DownloadUrl, req.Username, req.Password); err != nil {
+			return err
+		}
+	}
 
 	if err := copier.Copy(&imageRepo, &req); err != nil {
 		return errors.WithMessage(constant.ErrStructTransform, err.Error())
 	}
 
 	imageRepo.Status = constant.StatusSuccess
-	if req.Auth {
-		if err := u.CheckConn(req.DownloadUrl, req.Username, req.Password); err != nil {
-			imageRepo.Status = constant.StatusFailed
-			imageRepo.Message = err.Error()
-		}
-	}
-	if err := imageRepoRepo.Create(&imageRepo); err != nil {
-		return err
-	}
-
-	return nil
+	return imageRepoRepo.Create(&imageRepo)
 }
 
 func (u *ImageRepoService) BatchDelete(req dto.ImageRepoDelete) error {
@@ -142,19 +147,44 @@ func (u *ImageRepoService) Update(req dto.ImageRepoUpdate) error {
 	if req.ID == 1 {
 		return errors.New("The default value cannot be deleted !")
 	}
+	if cmd.CheckIllegal(req.Username, req.Password, req.DownloadUrl) {
+		return buserr.New(constant.ErrCmdIllegal)
+	}
 	repo, err := imageRepoRepo.Get(commonRepo.WithByID(req.ID))
 	if err != nil {
 		return err
 	}
-	if repo.DownloadUrl != req.DownloadUrl || (!repo.Auth && req.Auth) {
-		_ = u.handleRegistries(req.DownloadUrl, repo.DownloadUrl, "update")
+	if repo.Protocol == "http" && req.Protocol == "https" {
+		if err := u.handleRegistries("", repo.DownloadUrl, "delete"); err != nil {
+			return fmt.Errorf("delete registry %s failed, err: %v", repo.DownloadUrl, err)
+		}
+	}
+	if repo.Protocol == "http" && req.Protocol == "http" {
+		if err := u.handleRegistries(req.DownloadUrl, repo.DownloadUrl, "update"); err != nil {
+			return fmt.Errorf("update registry %s => %s failed, err: %v", repo.DownloadUrl, req.DownloadUrl, err)
+		}
+	}
+	if repo.Protocol == "https" && req.Protocol == "http" {
+		if err := u.handleRegistries(req.DownloadUrl, "", "create"); err != nil {
+			return fmt.Errorf("create registry %s failed, err: %v", req.DownloadUrl, err)
+		}
+	}
+	if repo.Auth != req.Auth || repo.DownloadUrl != req.DownloadUrl {
 		if repo.Auth {
-			_, _ = cmd.Execf("docker logout %s", repo.DownloadUrl)
+			_, _ = cmd.ExecWithCheck("docker", "logout", repo.DownloadUrl)
 		}
-		stdout, err := cmd.Exec("systemctl restart docker")
-		if err != nil {
-			return errors.New(string(stdout))
+		if req.Auth {
+			if err := u.CheckConn(req.DownloadUrl, req.Username, req.Password); err != nil {
+				return err
+			}
 		}
+	}
+
+	if err := validateDockerConfig(); err != nil {
+		return err
+	}
+	if err := restartDocker(); err != nil {
+		return err
 	}
 
 	upMap := make(map[string]interface{})
@@ -163,22 +193,15 @@ func (u *ImageRepoService) Update(req dto.ImageRepoUpdate) error {
 	upMap["username"] = req.Username
 	upMap["password"] = req.Password
 	upMap["auth"] = req.Auth
-
 	upMap["status"] = constant.StatusSuccess
 	upMap["message"] = ""
-	if req.Auth {
-		if err := u.CheckConn(req.DownloadUrl, req.Username, req.Password); err != nil {
-			upMap["status"] = constant.StatusFailed
-			upMap["message"] = err.Error()
-		}
-	}
 	return imageRepoRepo.Update(req.ID, upMap)
 }
 
 func (u *ImageRepoService) CheckConn(host, user, password string) error {
-	stdout, err := cmd.Execf("docker login -u %s -p %s %s", user, password, host)
+	stdout, err := cmd.ExecWithCheck("docker", "login", "-u", user, "-p", password, host)
 	if err != nil {
-		return errors.New(string(stdout))
+		return fmt.Errorf("stdout: %s, stderr: %v", stdout, err)
 	}
 	if strings.Contains(string(stdout), "Login Succeeded") {
 		return nil
@@ -187,13 +210,10 @@ func (u *ImageRepoService) CheckConn(host, user, password string) error {
 }
 
 func (u *ImageRepoService) handleRegistries(newHost, delHost, handle string) error {
-	if _, err := os.Stat(constant.DaemonJsonPath); err != nil && os.IsNotExist(err) {
-		if err = os.MkdirAll(path.Dir(constant.DaemonJsonPath), os.ModePerm); err != nil {
-			return err
-		}
-		_, _ = os.Create(constant.DaemonJsonPath)
+	err := createIfNotExistDaemonJsonFile()
+	if err != nil {
+		return err
 	}
-
 	daemonMap := make(map[string]interface{})
 	file, err := os.ReadFile(constant.DaemonJsonPath)
 	if err != nil {
@@ -209,12 +229,12 @@ func (u *ImageRepoService) handleRegistries(newHost, delHost, handle string) err
 	case "create":
 		registries = common.RemoveRepeatElement(append(registries, newHost))
 	case "update":
-		registries = common.RemoveRepeatElement(append(registries, newHost))
 		for i, regi := range registries {
 			if regi == delHost {
 				registries = append(registries[:i], registries[i+1:]...)
 			}
 		}
+		registries = common.RemoveRepeatElement(append(registries, newHost))
 	case "delete":
 		for i, regi := range registries {
 			if regi == delHost {

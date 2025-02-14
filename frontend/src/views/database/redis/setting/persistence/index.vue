@@ -1,7 +1,7 @@
 <template>
     <div v-if="persistenceShow">
         <el-row :gutter="20" style="margin-top: 5px" class="row-box">
-            <el-col :span="12">
+            <el-col :xs="24" :sm="12" :md="12" :lg="12" :xl="12">
                 <el-card class="el-card">
                     <template #header>
                         <div class="card-header">
@@ -21,9 +21,9 @@
                                 </el-form-item>
                                 <el-form-item label="appendfsync" prop="appendfsync">
                                     <el-radio-group style="width: 100%" v-model="form.appendfsync">
-                                        <el-radio label="always">always</el-radio>
-                                        <el-radio label="everysec">everysec</el-radio>
-                                        <el-radio label="no">no</el-radio>
+                                        <el-radio value="always">always</el-radio>
+                                        <el-radio value="everysec">everysec</el-radio>
+                                        <el-radio value="no">no</el-radio>
                                     </el-radio-group>
                                 </el-form-item>
                                 <el-form-item>
@@ -36,7 +36,7 @@
                     </el-form>
                 </el-card>
             </el-col>
-            <el-col :span="12">
+            <el-col :xs="24" :sm="12" :md="12" :lg="12" :xl="12">
                 <el-card class="el-card">
                     <template #header>
                         <div class="card-header">
@@ -81,7 +81,7 @@
         <el-card style="margin-top: 20px">
             <ComplexTable :pagination-config="paginationConfig" v-model:selects="selects" @search="search" :data="data">
                 <template #toolbar>
-                    <el-button type="primary" @click="onBackup">{{ $t('setting.backup') }}</el-button>
+                    <el-button type="primary" @click="onBackup">{{ $t('commons.button.backup') }}</el-button>
                     <el-button type="primary" plain :disabled="selects.length === 0" @click="onBatchDelete(null)">
                         {{ $t('commons.button.delete') }}
                     </el-button>
@@ -107,6 +107,7 @@
             </ComplexTable>
         </el-card>
 
+        <OpDialog ref="opRef" @search="search" />
         <ConfirmDialog ref="confirmDialogRef" @confirm="onRecover"></ConfirmDialog>
     </div>
 </template>
@@ -121,7 +122,6 @@ import { dateFormat } from '@/utils/util';
 import i18n from '@/lang';
 import { FormInstance } from 'element-plus';
 import { reactive, ref } from 'vue';
-import { useDeleteData } from '@/hooks/use-delete-data';
 import { MsgInfo, MsgSuccess } from '@/utils/message';
 import { Backup } from '@/api/interface/backup';
 
@@ -139,13 +139,17 @@ const rules = reactive({
     appendfsync: [Rules.requiredSelect],
 });
 const formRef = ref<FormInstance>();
+const database = ref();
+const opRef = ref();
 
 interface DialogProps {
+    database: string;
     status: string;
 }
 const persistenceShow = ref(false);
 const acceptParams = (prop: DialogProps): void => {
     persistenceShow.value = true;
+    database.value = prop.database;
     if (prop.status === 'Running') {
         loadform();
         search();
@@ -158,6 +162,7 @@ const selects = ref<any>([]);
 const currentRow = ref();
 const confirmDialogRef = ref();
 const paginationConfig = reactive({
+    cacheSizeKey: 'redis-backup-page-size',
     currentPage: 1,
     pageSize: 10,
     total: 0,
@@ -177,7 +182,7 @@ const handleDelete = (index: number) => {
 const search = async () => {
     let params = {
         type: 'redis',
-        name: '',
+        name: database.value,
         detailName: '',
         page: paginationConfig.currentPage,
         pageSize: paginationConfig.pageSize,
@@ -188,7 +193,7 @@ const search = async () => {
 };
 const onBackup = async () => {
     emit('loading', true);
-    await handleBackup({ name: '', detailName: '', type: 'redis' })
+    await handleBackup({ name: database.value, detailName: '', type: 'redis', secret: '' })
         .then(() => {
             emit('loading', false);
             search();
@@ -202,9 +207,10 @@ const onRecover = async () => {
     let param = {
         source: currentRow.value.source,
         type: 'redis',
-        name: '',
+        name: database.value,
         detailName: '',
         file: currentRow.value.fileDir + '/' + currentRow.value.fileName,
+        secret: '',
     };
     emit('loading', true);
     await handleRecover(param)
@@ -219,15 +225,26 @@ const onRecover = async () => {
 
 const onBatchDelete = async (row: Backup.RecordInfo | null) => {
     let ids: Array<number> = [];
+    let names: Array<string> = [];
     if (row) {
         ids.push(row.id);
+        names.push(row.fileName);
     } else {
         selects.value.forEach((item: Backup.RecordInfo) => {
             ids.push(item.id);
+            names.push(item.fileName);
         });
     }
-    await useDeleteData(deleteBackupRecord, { ids: ids }, 'commons.msg.delete');
-    search();
+    opRef.value.acceptParams({
+        title: i18n.global.t('commons.button.delete'),
+        names: names,
+        msg: i18n.global.t('commons.msg.operatorHelper', [
+            i18n.global.t('commons.button.backup'),
+            i18n.global.t('commons.button.delete'),
+        ]),
+        api: deleteBackupRecord,
+        params: { ids: ids },
+    });
 };
 
 const buttons = [
@@ -253,6 +270,7 @@ const buttons = [
 
 const onSave = async (formEl: FormInstance | undefined, type: string) => {
     let param = {} as Database.RedisConfPersistenceUpdate;
+    param.database = database.value;
     if (type == 'aof') {
         if (!formEl) return;
         formEl.validate(async (valid) => {
@@ -278,10 +296,10 @@ const onSave = async (formEl: FormInstance | undefined, type: string) => {
             MsgInfo(i18n.global.t('database.rdbInfo'));
             return;
         }
-        itemSaves.push(item.second + '', item.count + '');
+        itemSaves.push(item.second + ' ' + item.count);
     }
     param.type = type;
-    param.save = itemSaves.join(' ');
+    param.save = itemSaves.join(',');
     emit('loading', true);
     await updateRedisPersistenceConf(param)
         .then(() => {
@@ -295,7 +313,7 @@ const onSave = async (formEl: FormInstance | undefined, type: string) => {
 
 const loadform = async () => {
     form.saves = [];
-    const res = await redisPersistenceConf();
+    const res = await redisPersistenceConf(database.value);
     form.appendonly = res.data?.appendonly;
     form.appendfsync = res.data?.appendfsync;
     let itemSaves = res.data?.save.split(' ');

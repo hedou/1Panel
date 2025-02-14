@@ -22,6 +22,10 @@ type Location struct {
 	Replaces   map[string]string
 }
 
+func (l *Location) GetCodeBlock() string {
+	return ""
+}
+
 func NewLocation(directive IDirective) *Location {
 	location := &Location{
 		Modifier: "",
@@ -230,11 +234,13 @@ func (l *Location) AddSubFilter(subFilters map[string]string) {
 	}
 	l.UpdateDirective("proxy_set_header", []string{"Accept-Encoding", `""`})
 	l.UpdateDirective("sub_filter_once", []string{"off"})
+	l.UpdateDirective("sub_filter_types", []string{"*"})
 }
 
 func (l *Location) RemoveSubFilter() {
 	l.RemoveDirective("sub_filter", []string{})
 	l.RemoveDirective("proxy_set_header", []string{"Accept-Encoding", `""`})
 	l.RemoveDirective("sub_filter_once", []string{"off"})
+	l.RemoveDirective("sub_filter_types", []string{"*"})
 	l.Replaces = nil
 }

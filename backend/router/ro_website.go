@@ -9,57 +9,64 @@ import (
 type WebsiteRouter struct {
 }
 
-func (a *WebsiteRouter) InitWebsiteRouter(Router *gin.RouterGroup) {
-	groupRouter := Router.Group("websites")
-	groupRouter.Use(middleware.JwtAuth()).Use(middleware.SessionAuth()).Use(middleware.PasswordExpired())
+func (a *WebsiteRouter) InitRouter(Router *gin.RouterGroup) {
+	websiteRouter := Router.Group("websites")
+	websiteRouter.Use(middleware.JwtAuth()).Use(middleware.SessionAuth()).Use(middleware.PasswordExpired())
 
 	baseApi := v1.ApiGroupApp.BaseApi
 	{
-		groupRouter.POST("/search", baseApi.PageWebsite)
-		groupRouter.GET("/list", baseApi.GetWebsites)
-		groupRouter.POST("", baseApi.CreateWebsite)
-		groupRouter.POST("/operate", baseApi.OpWebsite)
-		groupRouter.POST("/log", baseApi.OpWebsiteLog)
-		groupRouter.POST("/check", baseApi.CreateWebsiteCheck)
-		groupRouter.GET("/options", baseApi.GetWebsiteOptions)
-		groupRouter.POST("/update", baseApi.UpdateWebsite)
-		groupRouter.GET("/:id", baseApi.GetWebsite)
-		groupRouter.POST("/del", baseApi.DeleteWebsite)
-		groupRouter.POST("/default/server", baseApi.ChangeDefaultServer)
+		websiteRouter.POST("/search", baseApi.PageWebsite)
+		websiteRouter.GET("/list", baseApi.GetWebsites)
+		websiteRouter.POST("", baseApi.CreateWebsite)
+		websiteRouter.POST("/operate", baseApi.OpWebsite)
+		websiteRouter.POST("/log", baseApi.OpWebsiteLog)
+		websiteRouter.POST("/check", baseApi.CreateWebsiteCheck)
+		websiteRouter.GET("/options", baseApi.GetWebsiteOptions)
+		websiteRouter.POST("/update", baseApi.UpdateWebsite)
+		websiteRouter.GET("/:id", baseApi.GetWebsite)
+		websiteRouter.POST("/del", baseApi.DeleteWebsite)
+		websiteRouter.POST("/default/server", baseApi.ChangeDefaultServer)
 
-		groupRouter.GET("/domains/:websiteId", baseApi.GetWebDomains)
-		groupRouter.POST("/domains/del", baseApi.DeleteWebDomain)
-		groupRouter.POST("/domains", baseApi.CreateWebDomain)
+		websiteRouter.GET("/domains/:websiteId", baseApi.GetWebDomains)
+		websiteRouter.POST("/domains/del", baseApi.DeleteWebDomain)
+		websiteRouter.POST("/domains", baseApi.CreateWebDomain)
 
-		groupRouter.GET("/:id/config/:type", baseApi.GetWebsiteNginx)
-		groupRouter.POST("/config", baseApi.GetNginxConfig)
-		groupRouter.POST("/config/update", baseApi.UpdateNginxConfig)
-		groupRouter.POST("/nginx/update", baseApi.UpdateWebsiteNginxConfig)
+		websiteRouter.GET("/:id/config/:type", baseApi.GetWebsiteNginx)
+		websiteRouter.POST("/config", baseApi.GetNginxConfig)
+		websiteRouter.POST("/config/update", baseApi.UpdateNginxConfig)
+		websiteRouter.POST("/nginx/update", baseApi.UpdateWebsiteNginxConfig)
 
-		groupRouter.GET("/:id/https", baseApi.GetHTTPSConfig)
-		groupRouter.POST("/:id/https", baseApi.UpdateHTTPSConfig)
+		websiteRouter.GET("/:id/https", baseApi.GetHTTPSConfig)
+		websiteRouter.POST("/:id/https", baseApi.UpdateHTTPSConfig)
 
-		groupRouter.POST("/waf/config", baseApi.GetWebsiteWafConfig)
-		groupRouter.POST("/waf/update", baseApi.UpdateWebsiteWafConfig)
+		websiteRouter.GET("/php/config/:id", baseApi.GetWebsitePHPConfig)
+		websiteRouter.POST("/php/config", baseApi.UpdateWebsitePHPConfig)
+		websiteRouter.POST("/php/update", baseApi.UpdatePHPFile)
+		websiteRouter.POST("/php/version", baseApi.ChangePHPVersion)
 
-		groupRouter.GET("/php/config/:id", baseApi.GetWebsitePHPConfig)
-		groupRouter.POST("/php/config", baseApi.UpdateWebsitePHPConfig)
-		groupRouter.POST("/php/update", baseApi.UpdatePHPFile)
+		websiteRouter.POST("/rewrite", baseApi.GetRewriteConfig)
+		websiteRouter.POST("/rewrite/update", baseApi.UpdateRewriteConfig)
 
-		groupRouter.POST("/rewrite", baseApi.GetRewriteConfig)
-		groupRouter.POST("/rewrite/update", baseApi.UpdateRewriteConfig)
+		websiteRouter.POST("/dir/update", baseApi.UpdateSiteDir)
+		websiteRouter.POST("/dir/permission", baseApi.UpdateSiteDirPermission)
+		websiteRouter.POST("/dir", baseApi.GetDirConfig)
 
-		groupRouter.POST("/dir/update", baseApi.UpdateSiteDir)
-		groupRouter.POST("/dir/permission", baseApi.UpdateSiteDirPermission)
+		websiteRouter.POST("/proxies", baseApi.GetProxyConfig)
+		websiteRouter.POST("/proxies/update", baseApi.UpdateProxyConfig)
+		websiteRouter.POST("/proxies/file", baseApi.UpdateProxyConfigFile)
+		websiteRouter.POST("/proxies/del", baseApi.DeleteProxyConfig)
 
-		groupRouter.POST("/proxies", baseApi.GetProxyConfig)
-		groupRouter.POST("/proxies/update", baseApi.UpdateProxyConfig)
-		groupRouter.POST("/proxies/file", baseApi.UpdateProxyConfigFile)
+		websiteRouter.POST("/auths", baseApi.GetAuthConfig)
+		websiteRouter.POST("/auths/update", baseApi.UpdateAuthConfig)
 
-		groupRouter.POST("/auths", baseApi.GetAuthConfig)
-		groupRouter.POST("/auths/update", baseApi.UpdateAuthConfig)
+		websiteRouter.POST("/leech", baseApi.GetAntiLeech)
+		websiteRouter.POST("/leech/update", baseApi.UpdateAntiLeech)
 
-		groupRouter.POST("/leech", baseApi.GetAntiLeech)
-		groupRouter.POST("/leech/update", baseApi.UpdateAntiLeech)
+		websiteRouter.POST("/redirect/update", baseApi.UpdateRedirectConfig)
+		websiteRouter.POST("/redirect", baseApi.GetRedirectConfig)
+		websiteRouter.POST("/redirect/file", baseApi.UpdateRedirectConfigFile)
+
+		websiteRouter.GET("/default/html/:type", baseApi.GetDefaultHtml)
+		websiteRouter.POST("/default/html/update", baseApi.UpdateDefaultHtml)
 	}
 }

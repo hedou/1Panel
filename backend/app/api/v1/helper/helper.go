@@ -3,6 +3,7 @@ package helper
 import (
 	"context"
 	"fmt"
+	"github.com/1Panel-dev/1Panel/cmd/server/res"
 	"net/http"
 	"strconv"
 
@@ -16,25 +17,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/pkg/errors"
 )
-
-func GeneratePaginationFromReq(c *gin.Context) (*dto.PageInfo, bool) {
-	p, ok1 := c.GetQuery("page")
-	ps, ok2 := c.GetQuery("pageSize")
-	if !(ok1 && ok2) {
-		return nil, false
-	}
-
-	page, err := strconv.Atoi(p)
-	if err != nil {
-		return nil, false
-	}
-	pageSize, err := strconv.Atoi(ps)
-	if err != nil {
-		return nil, false
-	}
-
-	return &dto.PageInfo{Page: page, PageSize: pageSize}, true
-}
 
 func ErrorWithDetail(ctx *gin.Context, code int, msgKey string, err error) {
 	res := dto.Response{
@@ -131,4 +113,44 @@ func GetTxAndContext() (tx *gorm.DB, ctx context.Context) {
 	tx = global.DB.Begin()
 	ctx = context.WithValue(context.Background(), constant.DB, tx)
 	return
+}
+
+func CheckBindAndValidate(req interface{}, c *gin.Context) error {
+	if err := c.ShouldBindJSON(req); err != nil {
+		ErrorWithDetail(c, constant.CodeErrBadRequest, constant.ErrTypeInvalidParams, err)
+		return err
+	}
+	if err := global.VALID.Struct(req); err != nil {
+		ErrorWithDetail(c, constant.CodeErrBadRequest, constant.ErrTypeInvalidParams, err)
+		return err
+	}
+	return nil
+}
+
+func CheckBind(req interface{}, c *gin.Context) error {
+	if err := c.ShouldBindJSON(&req); err != nil {
+		ErrorWithDetail(c, constant.CodeErrBadRequest, constant.ErrTypeInvalidParams, err)
+		return err
+	}
+	return nil
+}
+
+func ErrWithHtml(ctx *gin.Context, code int, scope string) {
+	if code == 444 {
+		ctx.String(444, "")
+		ctx.Abort()
+		return
+	}
+	file := fmt.Sprintf("html/%d.html", code)
+	if code == 200 && scope != "" {
+		file = fmt.Sprintf("html/200_%s.html", scope)
+	}
+	data, err := res.ErrorMsg.ReadFile(file)
+	if err != nil {
+		ctx.String(http.StatusInternalServerError, "Internal Server Error")
+		ctx.Abort()
+		return
+	}
+	ctx.Data(code, "text/html; charset=utf-8", data)
+	ctx.Abort()
 }

@@ -1,7 +1,6 @@
 package middleware
 
 import (
-	"errors"
 	"strings"
 
 	"github.com/1Panel-dev/1Panel/backend/app/api/v1/helper"
@@ -15,7 +14,7 @@ func BindDomain() gin.HandlerFunc {
 		settingRepo := repo.NewISettingRepo()
 		status, err := settingRepo.Get(settingRepo.WithByKey("BindDomain"))
 		if err != nil {
-			helper.ErrorWithDetail(c, constant.CodeErrDomain, constant.ErrTypeInternalServer, err)
+			helper.ErrorWithDetail(c, constant.CodeErrInternalServer, constant.ErrTypeInternalServer, err)
 			return
 		}
 		if len(status.Value) == 0 {
@@ -29,7 +28,8 @@ func BindDomain() gin.HandlerFunc {
 		}
 
 		if domains != status.Value {
-			helper.ErrorWithDetail(c, constant.CodeErrDomain, constant.ErrTypeInternalServer, errors.New("domain not allowed"))
+			code := LoadErrCode()
+			helper.ErrWithHtml(c, code, "err_domain")
 			return
 		}
 		c.Next()

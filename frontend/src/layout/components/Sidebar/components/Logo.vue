@@ -1,34 +1,52 @@
 <template>
-    <div class="logo flx-center">
-        <img :src="getLogoUrl(isCollapse)" alt="" />
+    <div class="logo" style="cursor: pointer" @click="goHome">
+        <template v-if="isCollapse">
+            <img
+                v-if="globalStore.themeConfig.logo"
+                :src="`/api/v1/images/logo?t=${Date.now()}`"
+                style="cursor: pointer"
+                alt="logo"
+            />
+            <MenuLogo v-else />
+        </template>
+        <template v-else>
+            <img
+                v-if="globalStore.themeConfig.logoWithText"
+                :src="`/api/v1/images/logoWithText?t=${Date.now()}`"
+                style="cursor: pointer"
+                alt="logo"
+            />
+            <PrimaryLogo v-else />
+        </template>
     </div>
 </template>
 
 <script setup lang="ts">
+import router from '@/routers';
 import { GlobalStore } from '@/store';
+import PrimaryLogo from '@/assets/images/1panel-logo.svg?component';
+import MenuLogo from '@/assets/images/1panel-menu-logo.svg?component';
 
 defineProps<{ isCollapse: boolean }>();
+
 const globalStore = GlobalStore();
 
-const getLogoUrl = (isCollapse: boolean) => {
-    const theme = globalStore.$state.themeConfig.theme || 'light';
-    if (isCollapse) {
-        return new URL(`../../../../assets/images/1panel-logo-${theme}.png`, import.meta.url).href;
-    } else {
-        return new URL(`../../../../assets/images/1panel-menu-${theme}.png`, import.meta.url).href;
-    }
+const goHome = () => {
+    router.push({ name: 'home' });
 };
 </script>
 
 <style scoped lang="scss">
 .logo {
-    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     height: 55px;
-    margin: 5px 0;
-    padding: 0 15px;
+    z-index: 1;
     img {
         object-fit: contain;
-        height: 40px;
+        width: 95%;
+        height: 45px;
     }
 }
 </style>

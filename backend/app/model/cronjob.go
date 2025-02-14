@@ -1,34 +1,39 @@
 package model
 
-import "time"
+import (
+	"time"
+)
 
 type Cronjob struct {
 	BaseModel
 
-	Name     string `gorm:"type:varchar(64);not null;unique" json:"name"`
-	Type     string `gorm:"type:varchar(64);not null" json:"type"`
-	SpecType string `gorm:"type:varchar(64);not null" json:"specType"`
-	Spec     string `gorm:"type:varchar(64);not null" json:"spec"`
-	Week     uint64 `gorm:"type:decimal" json:"week"`
-	Day      uint64 `gorm:"type:decimal" json:"day"`
-	Hour     uint64 `gorm:"type:decimal" json:"hour"`
-	Minute   uint64 `gorm:"type:decimal" json:"minute"`
-	Second   uint64 `gorm:"type:decimal" json:"second"`
+	Name string `gorm:"type:varchar(64);not null" json:"name"`
+	Type string `gorm:"type:varchar(64);not null" json:"type"`
+	Spec string `gorm:"type:varchar(64);not null" json:"spec"`
 
+	Command        string `gorm:"type:varchar(64)" json:"command"`
+	ContainerName  string `gorm:"type:varchar(64)" json:"containerName"`
 	Script         string `gorm:"longtext" json:"script"`
 	Website        string `gorm:"type:varchar(64)" json:"website"`
+	AppID          string `gorm:"type:varchar(64)" json:"appID"`
+	DBType         string `gorm:"type:varchar(64)" json:"dbType"`
 	DBName         string `gorm:"type:varchar(64)" json:"dbName"`
 	URL            string `gorm:"type:varchar(256)" json:"url"`
 	SourceDir      string `gorm:"type:varchar(256)" json:"sourceDir"`
 	ExclusionRules string `gorm:"longtext" json:"exclusionRules"`
 
-	KeepLocal    bool   `gorm:"type:varchar(64)" json:"keepLocal"`
-	TargetDirID  uint64 `gorm:"type:decimal" json:"targetDirID"`
-	RetainCopies uint64 `gorm:"type:decimal" json:"retainCopies"`
+	// 已废弃
+	KeepLocal   bool   `gorm:"type:varchar(64)" json:"keepLocal"`
+	TargetDirID uint64 `gorm:"type:decimal" json:"targetDirID"`
 
-	Status  string       `gorm:"type:varchar(64)" json:"status"`
-	EntryID uint64       `gorm:"type:decimal" json:"entryID"`
-	Records []JobRecords `json:"records"`
+	BackupAccounts  string `gorm:"type:varchar(64)" json:"backupAccounts"`
+	DefaultDownload string `gorm:"type:varchar(64)" json:"defaultDownload"`
+	RetainCopies    uint64 `gorm:"type:decimal" json:"retainCopies"`
+
+	Status   string       `gorm:"type:varchar(64)" json:"status"`
+	EntryIDs string       `gorm:"type:varchar(64)" json:"entryIDs"`
+	Records  []JobRecords `json:"records"`
+	Secret   string       `gorm:"type:varchar(64)" json:"secret"`
 }
 
 type JobRecords struct {

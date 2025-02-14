@@ -1,59 +1,39 @@
 <template>
     <div>
-        <LayoutContent v-loading="loading" :title="$t('ssh.loginLogs')">
+        <LayoutContent v-loading="loading" :title="'SSH ' + $t('ssh.loginLogs', 2)">
             <template #prompt>
-                <el-alert type="info" :closable="false">
-                    <template #default>
-                        <span>
-                            {{ $t('ssh.sshAlert') }}
-                        </span>
-                    </template>
-                </el-alert>
+                <el-alert type="info" :title="$t('ssh.sshAlert2')" :closable="false" />
+                <div class="mt-2"><el-alert type="info" :title="$t('ssh.sshAlert')" :closable="false" /></div>
+            </template>
+            <template #search>
+                <el-select v-model="searchStatus" @change="search()" class="p-w-200">
+                    <template #prefix>{{ $t('commons.table.status') }}</template>
+                    <el-option :label="$t('commons.table.all')" value="All"></el-option>
+                    <el-option :label="$t('commons.status.success')" value="Success"></el-option>
+                    <el-option :label="$t('commons.status.failed')" value="Failed"></el-option>
+                </el-select>
             </template>
             <template #toolbar>
-                <el-row>
-                    <el-col :xs="24" :sm="16" :md="16" :lg="16" :xl="16">
-                        <el-select v-model="searchStatus" @change="search()">
-                            <template #prefix>{{ $t('commons.table.status') }}</template>
-                            <el-option :label="$t('commons.table.all')" value="All"></el-option>
-                            <el-option :label="$t('commons.status.success')" value="Success"></el-option>
-                            <el-option :label="$t('commons.status.failed')" value="Failed"></el-option>
-                        </el-select>
-                        <el-tag type="success" size="large" style="margin-left: 15px">
-                            {{ $t('commons.status.success') }}： {{ successfulCount }}
-                        </el-tag>
-                        <el-tag type="danger" size="large" style="margin-left: 5px">
-                            {{ $t('commons.status.failed') }}： {{ faliedCount }}
-                        </el-tag>
-                    </el-col>
-                    <el-col :xs="24" :sm="8" :md="8" :lg="8" :xl="8">
+                <div class="flex justify-between gap-2 flex-wrap sm:flex-row">
+                    <div><!-- 占位 --></div>
+                    <div class="flex flex-wrap gap-3">
                         <TableSetting @search="search()" />
-                        <div class="search-button">
-                            <el-input
-                                v-model="searchInfo"
-                                @clear="search()"
-                                clearable
-                                suffix-icon="Search"
-                                @keyup.enter="search()"
-                                @change="search()"
-                                :placeholder="$t('commons.button.search')"
-                            ></el-input>
-                        </div>
-                    </el-col>
-                </el-row>
+                        <TableSearch @search="search()" v-model:searchName="searchInfo" />
+                    </div>
+                </div>
             </template>
 
             <template #main>
                 <ComplexTable :pagination-config="paginationConfig" :data="data" @search="search">
                     <el-table-column min-width="80" :label="$t('logs.loginIP')" prop="address" />
                     <el-table-column min-width="60" :label="$t('ssh.belong')" prop="area" />
-                    <el-table-column min-width="60" :label="$t('firewall.port')" prop="port" />
+                    <el-table-column min-width="60" :label="$t('commons.table.port')" prop="port" />
                     <el-table-column min-width="60" :label="$t('ssh.loginMode')" prop="authMode">
                         <template #default="{ row }">
                             <span v-if="row.authMode">{{ $t('ssh.' + row.authMode) }}</span>
                         </template>
                     </el-table-column>
-                    <el-table-column min-width="60" :label="$t('ssh.loginUser')" prop="user" />
+                    <el-table-column min-width="60" :label="$t('commons.table.user')" prop="user" />
                     <el-table-column min-width="60" :label="$t('logs.loginStatus')" prop="status">
                         <template #default="{ row }">
                             <div v-if="row.status === 'Success'">
@@ -79,22 +59,20 @@
 </template>
 
 <script setup lang="ts">
-import TableSetting from '@/components/table-setting/index.vue';
 import { dateFormat } from '@/utils/util';
-import { onMounted, reactive, ref } from '@vue/runtime-core';
+import { onMounted, reactive, ref } from 'vue';
 import { loadSSHLogs } from '@/api/modules/host';
 
 const loading = ref();
 const data = ref();
 const paginationConfig = reactive({
+    cacheSizeKey: 'ssh-log-page-size',
     currentPage: 1,
     pageSize: 10,
     total: 0,
 });
 const searchInfo = ref();
 const searchStatus = ref('All');
-const successfulCount = ref(0);
-const faliedCount = ref(0);
 
 const search = async () => {
     let params = {
@@ -107,9 +85,7 @@ const search = async () => {
     await loadSSHLogs(params)
         .then((res) => {
             loading.value = false;
-            data.value = res.data.logs || [];
-            faliedCount.value = res.data.failedCount;
-            successfulCount.value = res.data.successfulCount;
+            data.value = res.data?.logs || [];
             if (searchStatus.value === 'Success') {
                 paginationConfig.total = res.data.successfulCount;
             }

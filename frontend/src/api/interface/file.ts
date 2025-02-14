@@ -5,11 +5,13 @@ export namespace File {
         name: string;
         user: string;
         group: string;
+        uid: number;
+        gid: number;
         content: string;
         size: number;
         isDir: boolean;
         isSymlink: boolean;
-        linkPath: boolean;
+        linkPath: string;
         type: string;
         updateTime: string;
         modTime: string;
@@ -19,6 +21,7 @@ export namespace File {
         items: File[];
         extension: string;
         itemTotal: number;
+        favoriteID: number;
     }
 
     export interface ReqFile extends ReqPage {
@@ -28,6 +31,9 @@ export namespace File {
         dir?: boolean;
         showHidden?: boolean;
         containSub?: boolean;
+        sortBy?: string;
+        sortOrder?: string;
+        isDetail?: boolean;
     }
 
     export interface SearchUploadInfo extends ReqPage {
@@ -50,7 +56,7 @@ export namespace File {
     export interface FileCreate {
         path: string;
         isDir: boolean;
-        mode: number;
+        mode?: number;
         isLink?: boolean;
         isSymlink?: boolean;
         linkPath?: boolean;
@@ -61,6 +67,7 @@ export namespace File {
     export interface FileDelete {
         path: string;
         isDir: boolean;
+        forceDelete: boolean;
     }
 
     export interface FileBatchDelete {
@@ -74,12 +81,14 @@ export namespace File {
         dst: string;
         name: string;
         replace: boolean;
+        secret: string;
     }
 
     export interface FileDeCompress {
         path: string;
         dst: string;
         type: string;
+        secret: string;
     }
 
     export interface FileEdit {
@@ -103,6 +112,7 @@ export namespace File {
         path: string;
         name: string;
         url: string;
+        ignoreCertificate?: boolean;
     }
 
     export interface FileWgetRes {
@@ -140,5 +150,52 @@ export namespace File {
 
     export interface FilePath {
         path: string;
+    }
+
+    export interface ExistFileInfo {
+        name: string;
+        path: string;
+        size: number;
+        uploadSize: number;
+        modTime: string;
+    }
+
+    export interface RecycleBin {
+        sourcePath: string;
+        name: string;
+        isDir: boolean;
+        size: number;
+        deleteTime: string;
+        rName: string;
+        from: string;
+    }
+
+    export interface RecycleBinReduce {
+        rName: string;
+        from: string;
+        name: string;
+    }
+
+    export interface FileReadByLine {
+        id?: number;
+        type: string;
+        name?: string;
+        page: number;
+        pageSize: number;
+    }
+
+    export interface Favorite extends CommonModel {
+        path: string;
+        isDir: boolean;
+        isTxt: boolean;
+        name: string;
+    }
+
+    export interface FileRole {
+        paths: string[];
+        mode: number;
+        user: string;
+        group: string;
+        sub: boolean;
     }
 }

@@ -4,33 +4,38 @@
             <template #toolbar>
                 <el-row>
                     <el-col :span="16">
-                        <el-button class="no-active-button" @click="onChangeRoute('OperationLog')">
+                        <el-button class="tag-button no-active" @click="onChangeRoute('OperationLog')">
                             {{ $t('logs.operation') }}
                         </el-button>
-                        <el-button class="no-active-button" @click="onChangeRoute('LoginLog')">
+                        <el-button class="tag-button no-active" @click="onChangeRoute('LoginLog')">
                             {{ $t('logs.login') }}
                         </el-button>
-                        <el-button type="primary" @click="onChangeRoute('SystemLog')">
+                        <el-button class="tag-button" type="primary" @click="onChangeRoute('SystemLog')">
                             {{ $t('logs.system') }}
                         </el-button>
                     </el-col>
                 </el-row>
             </template>
+            <template #search>
+                <div class="flex flex-wrap gap-2 sm:gap-4">
+                    <el-select class="p-w-200" v-model="logConfig.name" @change="search()">
+                        <template #prefix>{{ $t('commons.button.log') }}</template>
+                        <el-option v-for="(item, index) in fileList" :key="index" :label="item" :value="item" />
+                    </el-select>
+                    <el-checkbox border @change="changeTail" v-model="isWatch">
+                        {{ $t('commons.button.watch') }}
+                    </el-checkbox>
+                </div>
+            </template>
             <template #main>
-                <codemirror
-                    :autofocus="true"
-                    placeholder="None data"
-                    :indent-with-tab="true"
-                    :tabSize="4"
-                    style="height: calc(100vh - 290px)"
-                    :lineWrapping="true"
-                    :matchBrackets="true"
-                    theme="cobalt"
-                    :styleActiveLine="true"
-                    :extensions="extensions"
-                    @ready="handleReady"
-                    v-model="logs"
-                    :disabled="true"
+                <LogFile
+                    ref="logRef"
+                    :config="logConfig"
+                    v-if="showLog"
+                    :default-button="false"
+                    v-model:loading="loading"
+                    v-model:hasContent="hasContent"
+                    :style="'height: calc(100vh - 370px);min-height: 200px'"
                 />
             </template>
         </LayoutContent>
@@ -38,41 +43,42 @@
 </template>
 
 <script setup lang="ts">
-import { Codemirror } from 'vue-codemirror';
-import { javascript } from '@codemirror/lang-javascript';
-import { oneDark } from '@codemirror/theme-one-dark';
-import { nextTick, onMounted, ref, shallowRef } from 'vue';
-import { LoadFile } from '@/api/modules/files';
-import { loadBaseDir } from '@/api/modules/setting';
+import { nextTick, onMounted, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
-const router = useRouter();
+import { getSystemFiles } from '@/api/modules/log';
+import LogFile from '@/components/log-file/index.vue';
 
+const router = useRouter();
 const loading = ref();
-const extensions = [javascript(), oneDark];
-const logs = ref();
-const view = shallowRef();
-const handleReady = (payload) => {
-    view.value = payload.view;
+const isWatch = ref();
+const fileList = ref();
+const logRef = ref();
+
+const hasContent = ref(false);
+const logConfig = reactive({
+    type: 'system',
+    name: '',
+});
+const showLog = ref(false);
+
+const changeTail = () => {
+    logRef.value.changeTail(true);
 };
 
-const loadSystemlogs = async () => {
-    const pathRes = await loadBaseDir();
-    let logPath = pathRes.data + '/log';
-    await LoadFile({ path: `${logPath}/1Panel.log` })
-        .then((res) => {
-            loading.value = false;
-            logs.value = res.data;
-            nextTick(() => {
-                const state = view.value.state;
-                view.value.dispatch({
-                    selection: { anchor: state.doc.length, head: state.doc.length },
-                    scrollIntoView: true,
-                });
-            });
-        })
-        .catch(() => {
-            loading.value = false;
-        });
+const loadFiles = async () => {
+    const res = await getSystemFiles();
+    fileList.value = res.data || [];
+    if (fileList.value) {
+        logConfig.name = fileList.value[0];
+        search();
+    }
+};
+
+const search = () => {
+    showLog.value = false;
+    nextTick(() => {
+        showLog.value = true;
+    });
 };
 
 const onChangeRoute = async (addr: string) => {
@@ -80,6 +86,15 @@ const onChangeRoute = async (addr: string) => {
 };
 
 onMounted(() => {
-    loadSystemlogs();
+    loadFiles();
 });
 </script>
+
+<style scoped lang="scss">
+.watchCheckbox {
+    margin-top: 2px;
+    margin-bottom: 10px;
+    float: left;
+    margin-left: 20px;
+}
+</style>

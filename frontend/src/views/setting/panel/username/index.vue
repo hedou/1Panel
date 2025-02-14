@@ -1,21 +1,34 @@
 <template>
     <div>
-        <el-drawer v-model="drawerVisiable" :destroy-on-close="true" :close-on-click-modal="false" size="30%">
+        <el-drawer
+            v-model="drawerVisible"
+            :destroy-on-close="true"
+            :close-on-click-modal="false"
+            :close-on-press-escape="false"
+            size="30%"
+        >
             <template #header>
                 <DrawerHeader :header="$t('setting.user')" :back="handleClose" />
             </template>
-            <el-form ref="formRef" label-position="top" :model="form" @submit.prevent v-loading="loading">
+            <el-form
+                ref="formRef"
+                label-position="top"
+                :model="form"
+                @submit.prevent
+                v-loading="loading"
+                :rules="rules"
+            >
                 <el-row type="flex" justify="center">
                     <el-col :span="22">
-                        <el-form-item :label="$t('setting.user')" prop="userName" :rules="Rules.userName">
-                            <el-input clearable v-model="form.userName" />
+                        <el-form-item :label="$t('setting.user')" prop="userName">
+                            <el-input clearable v-model.trim="form.userName" />
                         </el-form-item>
                     </el-col>
                 </el-row>
             </el-form>
             <template #footer>
                 <span class="dialog-footer">
-                    <el-button @click="drawerVisiable = false">{{ $t('commons.button.cancel') }}</el-button>
+                    <el-button @click="drawerVisible = false">{{ $t('commons.button.cancel') }}</el-button>
                     <el-button :disabled="loading" type="primary" @click="onSaveUserName(formRef)">
                         {{ $t('commons.button.confirm') }}
                     </el-button>
@@ -40,18 +53,20 @@ const globalStore = GlobalStore();
 interface DialogProps {
     userName: string;
 }
-const drawerVisiable = ref();
+const drawerVisible = ref();
 const loading = ref();
 
 const form = reactive({
     userName: '',
 });
-
+const rules = reactive({
+    userName: [Rules.userName, Rules.noSpace],
+});
 const formRef = ref<FormInstance>();
 
 const acceptParams = (params: DialogProps): void => {
     form.userName = params.userName;
-    drawerVisiable.value = true;
+    drawerVisible.value = true;
 };
 
 const onSaveUserName = async (formEl: FormInstance | undefined) => {
@@ -80,7 +95,7 @@ const onSaveUserName = async (formEl: FormInstance | undefined) => {
 };
 
 const handleClose = () => {
-    drawerVisiable.value = false;
+    drawerVisible.value = false;
 };
 
 defineExpose({

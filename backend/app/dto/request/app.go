@@ -11,6 +11,7 @@ type AppSearch struct {
 	Tags      []string `json:"tags"`
 	Type      string   `json:"type"`
 	Recommend bool     `json:"recommend"`
+	Resource  string   `json:"resource"`
 }
 
 type AppInstallCreate struct {
@@ -30,6 +31,9 @@ type AppContainerConfig struct {
 	AllowPort     bool    `json:"allowPort"`
 	EditCompose   bool    `json:"editCompose"`
 	DockerCompose string  `json:"dockerCompose"`
+	HostMode      bool    `json:"hostMode"`
+	PullImage     bool    `json:"pullImage"`
+	GpuConfig     bool    `json:"gpuConfig"`
 }
 
 type AppInstalledSearch struct {
@@ -39,6 +43,13 @@ type AppInstalledSearch struct {
 	Tags   []string `json:"tags"`
 	Update bool     `json:"update"`
 	Unused bool     `json:"unused"`
+	All    bool     `json:"all"`
+	Sync   bool     `json:"sync"`
+}
+
+type AppInstalledInfo struct {
+	Key  string `json:"key" validate:"required"`
+	Name string `json:"name"`
 }
 
 type AppBackupSearch struct {
@@ -51,13 +62,24 @@ type AppBackupDelete struct {
 }
 
 type AppInstalledOperate struct {
-	InstallId    uint                `json:"installId" validate:"required"`
-	BackupId     uint                `json:"backupId"`
-	DetailId     uint                `json:"detailId"`
-	Operate      constant.AppOperate `json:"operate" validate:"required"`
-	ForceDelete  bool                `json:"forceDelete"`
-	DeleteBackup bool                `json:"deleteBackup"`
-	DeleteDB     bool                `json:"deleteDB"`
+	InstallId     uint                `json:"installId" validate:"required"`
+	BackupId      uint                `json:"backupId"`
+	DetailId      uint                `json:"detailId"`
+	Operate       constant.AppOperate `json:"operate" validate:"required"`
+	ForceDelete   bool                `json:"forceDelete"`
+	DeleteBackup  bool                `json:"deleteBackup"`
+	DeleteDB      bool                `json:"deleteDB"`
+	Backup        bool                `json:"backup"`
+	PullImage     bool                `json:"pullImage"`
+	DockerCompose string              `json:"dockerCompose"`
+}
+
+type AppInstallUpgrade struct {
+	InstallID     uint   `json:"installId"`
+	DetailID      uint   `json:"detailId"`
+	Backup        bool   `json:"backup"`
+	PullImage     bool   `json:"pullImage"`
+	DockerCompose string `json:"dockerCompose"`
 }
 
 type AppInstalledUpdate struct {
@@ -66,8 +88,18 @@ type AppInstalledUpdate struct {
 	AppContainerConfig
 }
 
+type AppInstalledIgnoreUpgrade struct {
+	DetailID uint   `json:"detailID"  validate:"required"`
+	Operate  string `json:"operate"   validate:"required,oneof=cancel ignore"`
+}
+
 type PortUpdate struct {
 	Key  string `json:"key"`
 	Name string `json:"name"`
 	Port int64  `json:"port"`
+}
+
+type AppUpdateVersion struct {
+	AppInstallID  uint   `json:"appInstallID" validate:"required"`
+	UpdateVersion string `json:"updateVersion"`
 }

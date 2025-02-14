@@ -2,7 +2,6 @@
     <div v-loading="loading">
         <el-form :model="form" :rules="variablesRules" ref="phpFormRef" label-position="top">
             <el-row v-loading="loading">
-                <el-col :span="1"><br /></el-col>
                 <el-col :span="9">
                     <el-form-item label="short_open_tag" prop="short_open_tag">
                         <el-select v-model="form.short_open_tag">
@@ -13,7 +12,7 @@
                     </el-form-item>
                     <el-form-item label="max_execution_time" prop="max_execution_time">
                         <el-input clearable v-model.number="form.max_execution_time" maxlength="15">
-                            <template #append>{{ $t('php.second') }}</template>
+                            <template #append>{{ $t('commons.units.second') }}</template>
                         </el-input>
                         <span class="input-help">{{ $t('php.max_execution_time') }}</span>
                     </el-form-item>
@@ -51,7 +50,7 @@
                 <el-col :span="9">
                     <el-form-item label="default_socket_timeout" prop="default_socket_timeout">
                         <el-input clearable v-model.number="form.default_socket_timeout" maxlength="15">
-                            <template #append>{{ $t('php.second') }}</template>
+                            <template #append>{{ $t('commons.units.second') }}</template>
                         </el-input>
                         <span class="input-help">{{ $t('php.default_socket_timeout') }}</span>
                     </el-form-item>
@@ -68,7 +67,7 @@
                     </el-form-item>
                     <el-form-item label="max_input_time" prop="max_input_time">
                         <el-input clearable v-model.number="form.max_input_time" maxlength="15">
-                            <template #append>{{ $t('php.second') }}</template>
+                            <template #append>{{ $t('commons.units.second') }}</template>
                         </el-input>
                         <span class="input-help">{{ $t('php.max_input_time') }}</span>
                     </el-form-item>

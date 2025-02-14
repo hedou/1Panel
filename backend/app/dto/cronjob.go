@@ -1,47 +1,63 @@
 package dto
 
-import "time"
+import (
+	"time"
+)
+
+type PageCronjob struct {
+	PageInfo
+	Info    string `json:"info"`
+	OrderBy string `json:"orderBy" validate:"required,oneof=name status created_at"`
+	Order   string `json:"order" validate:"required,oneof=null ascending descending"`
+}
 
 type CronjobCreate struct {
-	Name     string `json:"name" validate:"required"`
-	Type     string `json:"type" validate:"required"`
-	SpecType string `json:"specType" validate:"required"`
-	Week     int    `json:"week" validate:"number,max=7,min=1"`
-	Day      int    `json:"day" validate:"number"`
-	Hour     int    `json:"hour" validate:"number"`
-	Minute   int    `json:"minute" validate:"number"`
-	Second   int    `json:"second" validate:"number"`
+	Name string `json:"name" validate:"required"`
+	Type string `json:"type" validate:"required"`
+	Spec string `json:"spec" validate:"required"`
 
 	Script         string `json:"script"`
+	Command        string `json:"command"`
+	ContainerName  string `json:"containerName"`
+	AppID          string `json:"appID"`
 	Website        string `json:"website"`
 	ExclusionRules string `json:"exclusionRules"`
+	DBType         string `json:"dbType"`
 	DBName         string `json:"dbName"`
 	URL            string `json:"url"`
 	SourceDir      string `json:"sourceDir"`
-	KeepLocal      bool   `json:"keepLocal"`
-	TargetDirID    int    `json:"targetDirID"`
-	RetainCopies   int    `json:"retainCopies" validate:"number,min=1"`
+
+	BackupAccounts  string `json:"backupAccounts"`
+	DefaultDownload string `json:"defaultDownload"`
+	RetainCopies    int    `json:"retainCopies" validate:"number,min=1"`
+	Secret          string `json:"secret"`
+	AlertCount      uint   `json:"alertCount"`
+	AlertTitle      string `json:"alertTitle"`
 }
 
 type CronjobUpdate struct {
-	ID       uint   `json:"id" validate:"required"`
-	Name     string `json:"name" validate:"required"`
-	SpecType string `json:"specType" validate:"required"`
-	Week     int    `json:"week" validate:"number,max=7,min=1"`
-	Day      int    `json:"day" validate:"number"`
-	Hour     int    `json:"hour" validate:"number"`
-	Minute   int    `json:"minute" validate:"number"`
-	Second   int    `json:"second" validate:"number"`
+	ID   uint   `json:"id" validate:"required"`
+	Type string `json:"type" validate:"required"`
+	Name string `json:"name" validate:"required"`
+	Spec string `json:"spec" validate:"required"`
 
 	Script         string `json:"script"`
+	Command        string `json:"command"`
+	ContainerName  string `json:"containerName"`
+	AppID          string `json:"appID"`
 	Website        string `json:"website"`
 	ExclusionRules string `json:"exclusionRules"`
+	DBType         string `json:"dbType"`
 	DBName         string `json:"dbName"`
 	URL            string `json:"url"`
 	SourceDir      string `json:"sourceDir"`
-	KeepLocal      bool   `json:"keepLocal"`
-	TargetDirID    int    `json:"targetDirID"`
-	RetainCopies   int    `json:"retainCopies" validate:"number,min=1"`
+
+	BackupAccounts  string `json:"backupAccounts"`
+	DefaultDownload string `json:"defaultDownload"`
+	RetainCopies    int    `json:"retainCopies" validate:"number,min=1"`
+	Secret          string `json:"secret"`
+	AlertCount      uint   `json:"alertCount"`
+	AlertTitle      string `json:"alertTitle"`
 }
 
 type CronjobUpdateStatus struct {
@@ -55,39 +71,40 @@ type CronjobDownload struct {
 }
 
 type CronjobClean struct {
+	IsDelete  bool `json:"isDelete"`
 	CleanData bool `json:"cleanData"`
 	CronjobID uint `json:"cronjobID" validate:"required"`
 }
 
 type CronjobBatchDelete struct {
 	CleanData bool   `json:"cleanData"`
-	IDs       []uint `json:"ids"`
+	IDs       []uint `json:"ids" validate:"required"`
 }
 
 type CronjobInfo struct {
-	ID       uint   `json:"id"`
-	Name     string `json:"name"`
-	Type     string `json:"type"`
-	SpecType string `json:"specType"`
-	Week     int    `json:"week"`
-	Day      int    `json:"day"`
-	Hour     int    `json:"hour"`
-	Minute   int    `json:"minute"`
-	Second   int    `json:"second"`
+	ID   uint   `json:"id"`
+	Name string `json:"name"`
+	Type string `json:"type"`
+	Spec string `json:"spec"`
 
-	Script         string `json:"script"`
-	Website        string `json:"website"`
-	ExclusionRules string `json:"exclusionRules"`
-	DBName         string `json:"dbName"`
-	URL            string `json:"url"`
-	SourceDir      string `json:"sourceDir"`
-	KeepLocal      bool   `json:"keepLocal"`
-	TargetDir      string `json:"targetDir"`
-	TargetDirID    int    `json:"targetDirID"`
-	RetainCopies   int    `json:"retainCopies"`
+	Script          string `json:"script"`
+	Command         string `json:"command"`
+	ContainerName   string `json:"containerName"`
+	AppID           string `json:"appID"`
+	Website         string `json:"website"`
+	ExclusionRules  string `json:"exclusionRules"`
+	DBType          string `json:"dbType"`
+	DBName          string `json:"dbName"`
+	URL             string `json:"url"`
+	SourceDir       string `json:"sourceDir"`
+	BackupAccounts  string `json:"backupAccounts"`
+	DefaultDownload string `json:"defaultDownload"`
+	RetainCopies    int    `json:"retainCopies"`
 
 	LastRecordTime string `json:"lastRecordTime"`
 	Status         string `json:"status"`
+	Secret         string `json:"secret"`
+	AlertCount     uint   `json:"alertCount"`
 }
 
 type SearchRecord struct {
@@ -99,12 +116,12 @@ type SearchRecord struct {
 }
 
 type Record struct {
-	ID         uint      `json:"id"`
-	StartTime  time.Time `json:"startTime"`
-	Records    string    `json:"records"`
-	Status     string    `json:"status"`
-	Message    string    `json:"message"`
-	TargetPath string    `json:"targetPath"`
-	Interval   int       `json:"interval"`
-	File       string    `json:"file"`
+	ID         uint   `json:"id"`
+	StartTime  string `json:"startTime"`
+	Records    string `json:"records"`
+	Status     string `json:"status"`
+	Message    string `json:"message"`
+	TargetPath string `json:"targetPath"`
+	Interval   int    `json:"interval"`
+	File       string `json:"file"`
 }

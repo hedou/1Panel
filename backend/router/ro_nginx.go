@@ -9,7 +9,7 @@ import (
 type NginxRouter struct {
 }
 
-func (a *NginxRouter) InitNginxRouter(Router *gin.RouterGroup) {
+func (a *NginxRouter) InitRouter(Router *gin.RouterGroup) {
 	groupRouter := Router.Group("openresty")
 	groupRouter.Use(middleware.JwtAuth()).Use(middleware.SessionAuth()).Use(middleware.PasswordExpired())
 
@@ -20,5 +20,6 @@ func (a *NginxRouter) InitNginxRouter(Router *gin.RouterGroup) {
 		groupRouter.POST("/update", baseApi.UpdateNginxConfigByScope)
 		groupRouter.GET("/status", baseApi.GetNginxStatus)
 		groupRouter.POST("/file", baseApi.UpdateNginxFile)
+		groupRouter.POST("/clear", baseApi.ClearNginxProxyCache)
 	}
 }

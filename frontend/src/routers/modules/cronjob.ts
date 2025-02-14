@@ -1,7 +1,7 @@
 import { Layout } from '@/routers/constant';
 
 const cronRouter = {
-    sort: 6,
+    sort: 9,
     path: '/cronjobs',
     component: Layout,
     redirect: '/cronjobs',

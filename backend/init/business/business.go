@@ -2,34 +2,46 @@ package business
 
 import (
 	"github.com/1Panel-dev/1Panel/backend/app/service"
+	"github.com/1Panel-dev/1Panel/backend/constant"
 	"github.com/1Panel-dev/1Panel/backend/global"
 )
 
 func Init() {
-	syncApp()
-	syncInstalledApp()
+	go syncApp()
+	go syncInstalledApp()
+	go syncRuntime()
+	go syncSSL()
+	generateKey()
 }
 
 func syncApp() {
-	setting, err := service.NewISettingService().GetSettingInfo()
-	if err != nil {
-		global.LOG.Errorf("sync app error: %s", err.Error())
-		return
-	}
-	if setting.AppStoreLastModified != "0" {
-		global.LOG.Info("no need to sync")
-		return
-	}
-	global.LOG.Info("sync app start...")
+	_ = service.NewISettingService().Update("AppStoreSyncStatus", constant.SyncSuccess)
 	if err := service.NewIAppService().SyncAppListFromRemote(); err != nil {
-		global.LOG.Errorf("sync app error")
+		global.LOG.Errorf("App Store synchronization failed")
 		return
 	}
-	global.LOG.Info("sync app successful")
 }
 
 func syncInstalledApp() {
 	if err := service.NewIAppInstalledService().SyncAll(true); err != nil {
-		global.LOG.Errorf("sync instaled app error: %s", err.Error())
+		global.LOG.Errorf("sync installed app error: %s", err.Error())
+	}
+}
+
+func syncRuntime() {
+	if err := service.NewRuntimeService().SyncForRestart(); err != nil {
+		global.LOG.Errorf("sync runtime status error : %s", err.Error())
+	}
+}
+
+func syncSSL() {
+	if err := service.NewIWebsiteSSLService().SyncForRestart(); err != nil {
+		global.LOG.Errorf("sync ssl status error : %s", err.Error())
+	}
+}
+
+func generateKey() {
+	if err := service.NewISettingService().GenerateRSAKey(); err != nil {
+		global.LOG.Errorf("generate rsa key error : %s", err.Error())
 	}
 }

@@ -3,10 +3,10 @@ package dto
 import "time"
 
 type DashboardBase struct {
-	WebsiteNumber     int `json:"websiteNumber"`
-	DatabaseNumber    int `json:"databaseNumber"`
-	CronjobNumber     int `json:"cronjobNumber"`
-	AppInstalldNumber int `json:"appInstalldNumber"`
+	WebsiteNumber      int `json:"websiteNumber"`
+	DatabaseNumber     int `json:"databaseNumber"`
+	CronjobNumber      int `json:"cronjobNumber"`
+	AppInstalledNumber int `json:"appInstalledNumber"`
 
 	Hostname             string `json:"hostname"`
 	OS                   string `json:"os"`
@@ -16,12 +16,29 @@ type DashboardBase struct {
 	KernelArch           string `json:"kernelArch"`
 	KernelVersion        string `json:"kernelVersion"`
 	VirtualizationSystem string `json:"virtualizationSystem"`
-
-	CPUCores        int    `json:"cpuCores"`
-	CPULogicalCores int    `json:"cpuLogicalCores"`
-	CPUModelName    string `json:"cpuModelName"`
+	IpV4Addr             string `json:"ipv4Addr"`
+	SystemProxy          string `json:"SystemProxy"`
+	CPUCores             int    `json:"cpuCores"`
+	CPULogicalCores      int    `json:"cpuLogicalCores"`
+	CPUModelName         string `json:"cpuModelName"`
 
 	CurrentInfo DashboardCurrent `json:"currentInfo"`
+}
+
+type OsInfo struct {
+	OS             string `json:"os"`
+	Platform       string `json:"platform"`
+	PlatformFamily string `json:"platformFamily"`
+	KernelArch     string `json:"kernelArch"`
+	KernelVersion  string `json:"kernelVersion"`
+
+	DiskSize int64 `json:"diskSize"`
+}
+
+type DashboardReq struct {
+	Scope     string `json:"scope"`
+	IoOption  string `json:"ioOption"`
+	NetOption string `json:"netOption"`
 }
 
 type DashboardCurrent struct {
@@ -43,7 +60,12 @@ type DashboardCurrent struct {
 	MemoryTotal       uint64  `json:"memoryTotal"`
 	MemoryAvailable   uint64  `json:"memoryAvailable"`
 	MemoryUsed        uint64  `json:"memoryUsed"`
-	MemoryUsedPercent float64 `json:"MemoryUsedPercent"`
+	MemoryUsedPercent float64 `json:"memoryUsedPercent"`
+
+	SwapMemoryTotal       uint64  `json:"swapMemoryTotal"`
+	SwapMemoryAvailable   uint64  `json:"swapMemoryAvailable"`
+	SwapMemoryUsed        uint64  `json:"swapMemoryUsed"`
+	SwapMemoryUsedPercent float64 `json:"swapMemoryUsedPercent"`
 
 	IOReadBytes  uint64 `json:"ioReadBytes"`
 	IOWriteBytes uint64 `json:"ioWriteBytes"`
@@ -55,6 +77,9 @@ type DashboardCurrent struct {
 
 	NetBytesSent uint64 `json:"netBytesSent"`
 	NetBytesRecv uint64 `json:"netBytesRecv"`
+
+	GPUData []GPUInfo `json:"gpuData"`
+	XPUData []XPUInfo `json:"xpuData"`
 
 	ShotTime time.Time `json:"shotTime"`
 }
@@ -72,4 +97,29 @@ type DiskInfo struct {
 	InodesUsed        uint64  `json:"inodesUsed"`
 	InodesFree        uint64  `json:"inodesFree"`
 	InodesUsedPercent float64 `json:"inodesUsedPercent"`
+}
+
+type GPUInfo struct {
+	Index            uint   `json:"index"`
+	ProductName      string `json:"productName"`
+	GPUUtil          string `json:"gpuUtil"`
+	Temperature      string `json:"temperature"`
+	PerformanceState string `json:"performanceState"`
+	PowerUsage       string `json:"powerUsage"`
+	PowerDraw        string `json:"powerDraw"`
+	MaxPowerLimit    string `json:"maxPowerLimit"`
+	MemoryUsage      string `json:"memoryUsage"`
+	MemUsed          string `json:"memUsed"`
+	MemTotal         string `json:"memTotal"`
+	FanSpeed         string `json:"fanSpeed"`
+}
+
+type XPUInfo struct {
+	DeviceID    int    `json:"deviceID"`
+	DeviceName  string `json:"deviceName"`
+	Memory      string `json:"memory"`
+	Temperature string `json:"temperature"`
+	MemoryUsed  string `json:"memoryUsed"`
+	Power       string `json:"power"`
+	MemoryUtil  string `json:"memoryUtil"`
 }

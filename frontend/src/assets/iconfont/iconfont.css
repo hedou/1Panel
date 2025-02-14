@@ -1,9 +1,9 @@
 @font-face {
   font-family: "panel"; /* Project id 3575356 */
-  src: url('iconfont.woff2?t=1684465849452') format('woff2'),
-       url('iconfont.woff?t=1684465849452') format('woff'),
-       url('iconfont.ttf?t=1684465849452') format('truetype'),
-       url('iconfont.svg?t=1684465849452#panel') format('svg');
+  src: url('iconfont.woff2?t=1739443302730') format('woff2'),
+       url('iconfont.woff?t=1739443302730') format('woff'),
+       url('iconfont.ttf?t=1739443302730') format('truetype'),
+       url('iconfont.svg?t=1739443302730#panel') format('svg');
 }
 
 .panel {
@@ -14,12 +14,36 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
-.p-caidan:before {
-  content: "\e61d";
+.p-jiqiren2:before {
+  content: "\e613";
 }
 
-.p-yanzhengma1:before {
-  content: "\e744";
+.p-alert-3:before {
+  content: "\e728";
+}
+
+.p-tongyijiancha:before {
+  content: "\e619";
+}
+
+.p-minglinghang:before {
+  content: "\e61e";
+}
+
+.p-17:before {
+  content: "\e618";
+}
+
+.p-alert-1:before {
+  content: "\e611";
+}
+
+.p-alert-2:before {
+  content: "\e701";
+}
+
+.p-aws:before {
+  content: "\e600";
 }
 
 .p-tengxunyun1:before {
@@ -28,6 +52,198 @@
 
 .p-qiniuyun:before {
   content: "\e62c";
+}
+
+.p-minio:before {
+  content: "\e63c";
+}
+
+.p-onedrive:before {
+  content: "\e601";
+}
+
+.p-oss:before {
+  content: "\e607";
+}
+
+.p-SFTP:before {
+  content: "\e647";
+}
+
+.p-webdav:before {
+  content: "\e622";
+}
+
+.p-zhongduan:before {
+  content: "\e731";
+}
+
+.p-docker1:before {
+  content: "\e76a";
+}
+
+.p-Firefox:before {
+  content: "\e87c";
+}
+
+.p-m-ios:before {
+  content: "\e60e";
+}
+
+.p-m-pc:before {
+  content: "\e771";
+}
+
+.p-m-theworld:before {
+  content: "\e947";
+}
+
+.p-m-android:before {
+  content: "\e9e0";
+}
+
+.p-m-tencent:before {
+  content: "\e609";
+}
+
+.p-m-windows:before {
+  content: "\e6a0";
+}
+
+.p-m-machine:before {
+  content: "\e862";
+}
+
+.p-m-mobile:before {
+  content: "\e620";
+}
+
+.p-m-ucweb:before {
+  content: "\e603";
+}
+
+.p-m-edge:before {
+  content: "\e8e2";
+}
+
+.p-m-2345explorer:before {
+  content: "\e60a";
+}
+
+.p-m-chrome:before {
+  content: "\ea09";
+}
+
+.p-m-opera:before {
+  content: "\ea0e";
+}
+
+.p-m-linux:before {
+  content: "\e80b";
+}
+
+.p-m-maxthon:before {
+  content: "\e676";
+}
+
+.p-m-mac:before {
+  content: "\ef2d";
+}
+
+.p-m-ie:before {
+  content: "\eaab";
+}
+
+.p-Chrome-OS:before {
+  content: "\e60b";
+}
+
+.p-m-safari:before {
+  content: "\e60c";
+}
+
+.p-m-360se:before {
+  content: "\e678";
+}
+
+.p-monitor-1:before {
+  content: "\e60d";
+}
+
+.p-xpack:before {
+  content: "\e604";
+}
+
+.p-monitor-4:before {
+  content: "\ec4e";
+}
+
+.p-waf-4:before {
+  content: "\e608";
+}
+
+.p-waf-1:before {
+  content: "\e62a";
+}
+
+.p-waf-2:before {
+  content: "\e682";
+}
+
+.p-waf-3:before {
+  content: "\e666";
+}
+
+.p-monitor-2:before {
+  content: "\ec4f";
+}
+
+.p-setting-1:before {
+  content: "\e626";
+}
+
+.p-setting-2:before {
+  content: "\e630";
+}
+
+.p-setting-3:before {
+  content: "\e617";
+}
+
+.p-tamper-4:before {
+  content: "\e7c3";
+}
+
+.p-tamper-2:before {
+  content: "\e610";
+}
+
+.p-tamper-3:before {
+  content: "\ec4d";
+}
+
+.p-tamper-1:before {
+  content: "\e687";
+}
+
+.p-monitor-3:before {
+  content: "\ec50";
+}
+
+.p-tongji:before {
+  content: "\e856";
+}
+
+.p-xiangqing:before {
+  content: "\e677";
+}
+
+.p-caidan:before {
+  content: "\e61d";
+}
+
+.p-yanzhengma1:before {
+  content: "\e744";
 }
 
 .p-file-png:before {
@@ -74,10 +290,6 @@
   content: "\e60f";
 }
 
-.p-aws:before {
-  content: "\e600";
-}
-
 .p-taolun:before {
   content: "\e602";
 }
@@ -86,20 +298,8 @@
   content: "\e616";
 }
 
-.p-SFTP:before {
-  content: "\e647";
-}
-
 .p-huaban88:before {
   content: "\e67c";
-}
-
-.p-oss:before {
-  content: "\e607";
-}
-
-.p-minio:before {
-  content: "\e63c";
 }
 
 .p-logout:before {

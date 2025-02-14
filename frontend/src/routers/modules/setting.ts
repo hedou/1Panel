@@ -1,7 +1,7 @@
 import { Layout } from '@/routers/constant';
 
 const settingRouter = {
-    sort: 8,
+    sort: 12,
     path: '/settings',
     component: Layout,
     redirect: '/settings/panel',
@@ -24,7 +24,7 @@ const settingRouter = {
                     hidden: true,
                     meta: {
                         requiresAuth: true,
-                        activeMenu: 'Setting',
+                        activeMenu: '/settings',
                     },
                 },
                 {
@@ -34,7 +34,17 @@ const settingRouter = {
                     hidden: true,
                     meta: {
                         requiresAuth: true,
-                        activeMenu: 'Setting',
+                        activeMenu: '/settings',
+                    },
+                },
+                {
+                    path: 'license',
+                    name: 'License',
+                    component: () => import('@/views/setting/license/index.vue'),
+                    hidden: true,
+                    meta: {
+                        requiresAuth: true,
+                        activeMenu: '/settings',
                     },
                 },
                 {
@@ -44,7 +54,7 @@ const settingRouter = {
                     hidden: true,
                     meta: {
                         requiresAuth: true,
-                        activeMenu: 'Setting',
+                        activeMenu: '/settings',
                     },
                 },
                 {
@@ -54,7 +64,7 @@ const settingRouter = {
                     hidden: true,
                     meta: {
                         requiresAuth: true,
-                        activeMenu: 'Setting',
+                        activeMenu: '/settings',
                     },
                 },
                 {
@@ -64,7 +74,7 @@ const settingRouter = {
                     component: () => import('@/views/setting/snapshot/index.vue'),
                     meta: {
                         requiresAuth: true,
-                        activeMenu: 'Setting',
+                        activeMenu: '/settings',
                     },
                 },
                 {
@@ -74,7 +84,7 @@ const settingRouter = {
                     component: () => import('@/views/setting/expired.vue'),
                     meta: {
                         requiresAuth: true,
-                        activeMenu: 'Expired',
+                        activeMenu: '/settings',
                     },
                 },
             ],

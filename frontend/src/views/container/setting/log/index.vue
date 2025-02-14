@@ -1,16 +1,17 @@
 <template>
     <div>
         <el-drawer
-            v-model="drawerVisiable"
+            v-model="drawerVisible"
             :destroy-on-close="true"
             :close-on-click-modal="false"
+            :close-on-press-escape="false"
             @close="handleClose"
             size="30%"
         >
             <template #header>
                 <DrawerHeader :header="$t('container.cutLog')" :back="handleClose" />
             </template>
-            <el-alert style="margin-bottom: 20px" :closable="false" type="warning">
+            <el-alert class="common-prompt" :closable="false" type="warning">
                 <template #default>
                     <ul style="margin-left: -20px">
                         <li>{{ $t('container.cutLogHelper1') }}</li>
@@ -26,10 +27,10 @@
                             <el-input v-model.number="form.logMaxSize">
                                 <template #append>
                                     <el-select v-model="form.sizeUnit" style="width: 70px">
-                                        <el-option label="byte" value="b"></el-option>
-                                        <el-option label="kb" value="k"></el-option>
-                                        <el-option label="mb" value="m"></el-option>
-                                        <el-option label="gb" value="g"></el-option>
+                                        <el-option label="Byte" value="b"></el-option>
+                                        <el-option label="KB" value="k"></el-option>
+                                        <el-option label="MB" value="m"></el-option>
+                                        <el-option label="GB" value="g"></el-option>
                                     </el-select>
                                 </template>
                             </el-input>
@@ -63,7 +64,7 @@ import { updateLogOption } from '@/api/modules/container';
 import DrawerHeader from '@/components/drawer-header/index.vue';
 
 const loading = ref();
-const drawerVisiable = ref();
+const drawerVisible = ref();
 const confirmDialogRef = ref();
 const formRef = ref();
 
@@ -92,7 +93,7 @@ const acceptParams = (params: DialogProps): void => {
         form.logMaxSize = 10;
         form.sizeUnit = 'm';
     }
-    drawerVisiable.value = true;
+    drawerVisible.value = true;
 };
 
 const onSave = async (formEl: FormInstance | undefined) => {
@@ -113,7 +114,7 @@ const onSubmitSave = async () => {
     await updateLogOption(form.logMaxSize + form.sizeUnit, form.logMaxFile + '')
         .then(() => {
             loading.value = false;
-            drawerVisiable.value = false;
+            drawerVisible.value = false;
             emit('search');
             MsgSuccess(i18n.global.t('commons.msg.operationSuccess'));
         })
@@ -143,7 +144,7 @@ const loadSize = (value: string) => {
 
 const handleClose = () => {
     emit('search');
-    drawerVisiable.value = false;
+    drawerVisible.value = false;
 };
 
 defineExpose({

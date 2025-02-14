@@ -1,9 +1,11 @@
 <template>
     <el-tag :type="getType(status)" round effect="light">
-        {{ $t('commons.status.' + status) }}
-        <el-icon v-if="loadingIcon(status)" class="is-loading">
-            <Loading />
-        </el-icon>
+        <span class="flx-align-center">
+            {{ $t('commons.status.' + status) }}
+            <el-icon v-if="loadingIcon(status)" class="is-loading">
+                <Loading />
+            </el-icon>
+        </span>
     </el-tag>
 </template>
 
@@ -13,7 +15,7 @@ import { onMounted, ref } from 'vue';
 const props = defineProps({
     status: {
         type: String,
-        default: 'runnning',
+        default: 'running',
     },
 });
 let status = ref('running');
@@ -28,13 +30,28 @@ const getType = (status: string) => {
         case 'stopped':
             return 'danger';
         case 'unhealthy':
+        case 'paused':
+        case 'exited':
+        case 'dead':
+        case 'removing':
             return 'warning';
         default:
-            return '';
+            return 'primary';
     }
 };
 
-const loadingStatus = ['installing', 'building', 'restarting', 'upgrading'];
+const loadingStatus = [
+    'installing',
+    'building',
+    'restarting',
+    'upgrading',
+    'rebuilding',
+    'recreating',
+    'creating',
+    'starting',
+    'removing',
+    'applying',
+];
 
 const loadingIcon = (status: string): boolean => {
     return loadingStatus.indexOf(status) > -1;

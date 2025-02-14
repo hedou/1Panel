@@ -14,6 +14,7 @@ type IWebsiteDomainRepo interface {
 	WithWebsiteId(websiteId uint) DBOption
 	WithPort(port int) DBOption
 	WithDomain(domain string) DBOption
+	WithDomainLike(domain string) DBOption
 	Page(page, size int, opts ...DBOption) (int64, []model.WebsiteDomain, error)
 	GetFirst(opts ...DBOption) (model.WebsiteDomain, error)
 	GetBy(opts ...DBOption) ([]model.WebsiteDomain, error)
@@ -21,6 +22,7 @@ type IWebsiteDomainRepo interface {
 	Create(ctx context.Context, app *model.WebsiteDomain) error
 	Save(ctx context.Context, app *model.WebsiteDomain) error
 	DeleteBy(ctx context.Context, opts ...DBOption) error
+	DeleteAll(ctx context.Context) error
 }
 
 func NewIWebsiteDomainRepo() IWebsiteDomainRepo {
@@ -41,6 +43,11 @@ func (w WebsiteDomainRepo) WithPort(port int) DBOption {
 func (w WebsiteDomainRepo) WithDomain(domain string) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("domain = ?", domain)
+	}
+}
+func (w WebsiteDomainRepo) WithDomainLike(domain string) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("domain like ?", "%"+domain+"%")
 	}
 }
 func (w WebsiteDomainRepo) Page(page, size int, opts ...DBOption) (int64, []model.WebsiteDomain, error) {
@@ -84,4 +91,8 @@ func (w WebsiteDomainRepo) Save(ctx context.Context, app *model.WebsiteDomain) e
 
 func (w WebsiteDomainRepo) DeleteBy(ctx context.Context, opts ...DBOption) error {
 	return getTx(ctx, opts...).Delete(&model.WebsiteDomain{}).Error
+}
+
+func (w WebsiteDomainRepo) DeleteAll(ctx context.Context) error {
+	return getTx(ctx).Where("1 = 1 ").Delete(&model.WebsiteDomain{}).Error
 }

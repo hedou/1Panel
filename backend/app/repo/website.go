@@ -18,6 +18,7 @@ type IWebsiteRepo interface {
 	WithDefaultServer() DBOption
 	WithDomainLike(domain string) DBOption
 	WithRuntimeID(runtimeID uint) DBOption
+	WithIDs(ids []uint) DBOption
 	Page(page, size int, opts ...DBOption) (int64, []model.Website, error)
 	List(opts ...DBOption) ([]model.Website, error)
 	GetFirst(opts ...DBOption) (model.Website, error)
@@ -26,6 +27,7 @@ type IWebsiteRepo interface {
 	SaveWithoutCtx(app *model.Website) error
 	DeleteBy(ctx context.Context, opts ...DBOption) error
 	Create(ctx context.Context, app *model.Website) error
+	DeleteAll(ctx context.Context) error
 }
 
 func NewIWebsiteRepo() IWebsiteRepo {
@@ -35,9 +37,15 @@ func NewIWebsiteRepo() IWebsiteRepo {
 type WebsiteRepo struct {
 }
 
-func (w *WebsiteRepo) WithAppInstallId(appInstallId uint) DBOption {
+func (w *WebsiteRepo) WithAppInstallId(appInstallID uint) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
-		return db.Where("app_install_id = ?", appInstallId)
+		return db.Where("app_install_id = ?", appInstallID)
+	}
+}
+
+func (w *WebsiteRepo) WithIDs(ids []uint) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("id in (?)", ids)
 	}
 }
 
@@ -88,13 +96,13 @@ func (w *WebsiteRepo) Page(page, size int, opts ...DBOption) (int64, []model.Web
 	db := getDb(opts...).Model(&model.Website{})
 	count := int64(0)
 	db = db.Count(&count)
-	err := db.Limit(size).Offset(size * (page - 1)).Preload("WebsiteSSL").Find(&websites).Error
+	err := db.Debug().Limit(size).Offset(size * (page - 1)).Preload("WebsiteSSL").Find(&websites).Error
 	return count, websites, err
 }
 
 func (w *WebsiteRepo) List(opts ...DBOption) ([]model.Website, error) {
 	var websites []model.Website
-	err := getDb(opts...).Model(&model.Website{}).Preload("WebsiteSSL").Find(&websites).Error
+	err := getDb(opts...).Model(&model.Website{}).Preload("Domains").Preload("WebsiteSSL").Find(&websites).Error
 	return websites, err
 }
 
@@ -130,4 +138,8 @@ func (w *WebsiteRepo) SaveWithoutCtx(website *model.Website) error {
 
 func (w *WebsiteRepo) DeleteBy(ctx context.Context, opts ...DBOption) error {
 	return getTx(ctx, opts...).Delete(&model.Website{}).Error
+}
+
+func (w *WebsiteRepo) DeleteAll(ctx context.Context) error {
+	return getTx(ctx).Where("1 = 1 ").Delete(&model.Website{}).Error
 }

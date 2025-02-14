@@ -1,9 +1,10 @@
 <template>
     <el-drawer
-        v-model="monitorVisiable"
+        v-model="monitorVisible"
         :destroy-on-close="true"
         @close="handleClose"
         :close-on-click-modal="false"
+        :close-on-press-escape="false"
         size="50%"
     >
         <template #header>
@@ -12,7 +13,6 @@
         <el-form label-position="top" @submit.prevent>
             <el-form-item :label="$t('container.refreshTime')">
                 <el-select v-model="timeInterval" @change="changeTimer">
-                    <el-option label="1s" :value="1" />
                     <el-option label="3s" :value="3" />
                     <el-option label="5s" :value="5" />
                     <el-option label="10s" :value="10" />
@@ -62,14 +62,14 @@
 
 <script lang="ts" setup>
 import { onBeforeUnmount, ref } from 'vue';
-import { ContainerStats } from '@/api/modules/container';
+import { containerStats } from '@/api/modules/container';
 import { dateFormatForSecond } from '@/utils/util';
 import VCharts from '@/components/v-charts/index.vue';
 import i18n from '@/lang';
 import DrawerHeader from '@/components/drawer-header/index.vue';
 
 const title = ref();
-const monitorVisiable = ref(false);
+const monitorVisible = ref(false);
 const timeInterval = ref();
 let timer: NodeJS.Timer | null = null;
 let isInit = ref<boolean>(true);
@@ -83,7 +83,7 @@ const dialogData = ref<DialogProps>({
 });
 
 const acceptParams = async (params: DialogProps): Promise<void> => {
-    monitorVisiable.value = true;
+    monitorVisible.value = true;
     dialogData.value.containerID = params.containerID;
     title.value = params.container;
     cpuDatas.value = [];
@@ -98,7 +98,7 @@ const acceptParams = async (params: DialogProps): Promise<void> => {
     isInit.value = true;
     loadData();
     timer = setInterval(async () => {
-        if (monitorVisiable.value) {
+        if (monitorVisible.value) {
             isInit.value = false;
             loadData();
         }
@@ -118,14 +118,14 @@ const chartsOption = ref({ cpuChart: null, memoryChart: null, ioChart: null, net
 const changeTimer = () => {
     clearInterval(Number(timer));
     timer = setInterval(async () => {
-        if (monitorVisiable.value) {
+        if (monitorVisible.value) {
             loadData();
         }
     }, 1000 * timeInterval.value);
 };
 
 const loadData = async () => {
-    const res = await ContainerStats(dialogData.value.containerID);
+    const res = await containerStats(dialogData.value.containerID);
     cpuDatas.value.push(res.data.cpuPercent.toFixed(2));
     if (cpuDatas.value.length > 20) {
         cpuDatas.value.splice(0, 1);
@@ -161,8 +161,8 @@ const loadData = async () => {
 
     chartsOption.value['cpuChart'] = {
         title: 'CPU',
-        xDatas: timeDatas.value,
-        yDatas: [
+        xData: timeDatas.value,
+        yData: [
             {
                 name: 'CPU',
                 data: cpuDatas.value,
@@ -173,8 +173,8 @@ const loadData = async () => {
 
     chartsOption.value['memoryChart'] = {
         title: i18n.global.t('monitor.memory'),
-        xDatas: timeDatas.value,
-        yDatas: [
+        xData: timeDatas.value,
+        yData: [
             {
                 name: i18n.global.t('monitor.memory'),
                 data: memDatas.value,
@@ -189,8 +189,8 @@ const loadData = async () => {
 
     chartsOption.value['ioChart'] = {
         title: i18n.global.t('monitor.disk') + ' IO',
-        xDatas: timeDatas.value,
-        yDatas: [
+        xData: timeDatas.value,
+        yData: [
             {
                 name: i18n.global.t('monitor.read'),
                 data: ioReadDatas.value,
@@ -205,8 +205,8 @@ const loadData = async () => {
 
     chartsOption.value['networkChart'] = {
         title: i18n.global.t('monitor.network'),
-        xDatas: timeDatas.value,
-        yDatas: [
+        xData: timeDatas.value,
+        yData: [
             {
                 name: i18n.global.t('monitor.up'),
                 data: netTxDatas.value,
@@ -216,11 +216,11 @@ const loadData = async () => {
                 data: netRxDatas.value,
             },
         ],
-        formatStr: 'KB/s',
+        formatStr: 'KB',
     };
 };
 const handleClose = async () => {
-    monitorVisiable.value = false;
+    monitorVisible.value = false;
     clearInterval(Number(timer));
     timer = null;
     chartsOption.value = { cpuChart: null, memoryChart: null, ioChart: null, networkChart: null };

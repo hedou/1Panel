@@ -1,14 +1,14 @@
 <template>
-    <div :class="classObj" class="app-wrapper" v-loading="loading" :element-loading-text="loadinText" fullscreen>
+    <div :class="classObj" class="app-wrapper" v-loading="loading" :element-loading-text="loadingText" fullscreen>
         <div v-if="classObj.mobile && classObj.openSidebar" class="drawer-bg" @click="handleClickOutside" />
         <div class="app-sidebar" v-if="!globalStore.isFullScreen">
-            <Sidebar />
+            <Sidebar @menu-click="handleMenuClick" />
         </div>
 
         <div class="main-container">
             <mobile-header v-if="classObj.mobile" />
-            <app-main class="app-main" />
-
+            <Tabs v-if="classObj.openMenuTabs" />
+            <app-main :keep-alive="classObj.openMenuTabs ? tabsStore.cachedTabs : null" class="app-main" />
             <Footer class="app-footer" v-if="!globalStore.isFullScreen" />
         </div>
     </div>
@@ -16,32 +16,35 @@
 
 <script setup lang="ts">
 import { onMounted, computed, ref, watch, onBeforeUnmount } from 'vue';
-import { Sidebar, Footer, AppMain, MobileHeader } from './components';
+import { Sidebar, Footer, AppMain, MobileHeader, Tabs } from './components';
 import useResize from './hooks/useResize';
-import { GlobalStore } from '@/store';
-import { MenuStore } from '@/store/modules/menu';
+import { GlobalStore, MenuStore, TabsStore } from '@/store';
 import { DeviceType } from '@/enums/app';
-import { useI18n } from 'vue-i18n';
+import { getSystemAvailable } from '@/api/modules/setting';
+import { useRoute, useRouter } from 'vue-router';
+import { loadProductProFromDB } from '@/utils/xpack';
 import { useTheme } from '@/hooks/use-theme';
-import { getSettingInfo, getSystemAvailable } from '@/api/modules/setting';
+const { switchTheme } = useTheme();
 useResize();
 
+const router = useRouter();
+const route = useRoute();
 const menuStore = MenuStore();
 const globalStore = GlobalStore();
+const tabsStore = TabsStore();
 
-const i18n = useI18n();
 const loading = ref(false);
-const loadinText = ref();
-const themeConfig = computed(() => globalStore.themeConfig);
-const { switchDark } = useTheme();
+const loadingText = ref();
 
 let timer: NodeJS.Timer | null = null;
 
 const classObj = computed(() => {
     return {
+        fullScreen: globalStore.isFullScreen,
         hideSidebar: menuStore.isCollapse,
         openSidebar: !menuStore.isCollapse,
         mobile: globalStore.device === DeviceType.Mobile,
+        openMenuTabs: globalStore.openMenuTabs,
         withoutAnimation: menuStore.withoutAnimation,
     };
 });
@@ -59,22 +62,15 @@ watch(
         }
     },
 );
-
-const loadDataFromDB = async () => {
-    const res = await getSettingInfo();
-    document.title = res.data.panelName;
-    i18n.locale.value = res.data.language;
-    i18n.warnHtmlMessage = false;
-    globalStore.entrance = res.data.securityEntrance;
-    globalStore.updateLanguage(res.data.language);
-    globalStore.setThemeConfig({ ...themeConfig.value, theme: res.data.theme });
-    globalStore.setThemeConfig({ ...themeConfig.value, panelName: res.data.panelName });
-    switchDark();
+const handleMenuClick = async (path) => {
+    await router.push({ path: path });
+    tabsStore.addTab(route);
+    tabsStore.activeTabPath = route.path;
 };
 
 const loadStatus = async () => {
     loading.value = globalStore.isLoading;
-    loadinText.value = globalStore.loadingText;
+    loadingText.value = globalStore.loadingText;
     if (loading.value) {
         timer = setInterval(async () => {
             await getSystemAvailable()
@@ -98,8 +94,23 @@ onBeforeUnmount(() => {
     timer = null;
 });
 onMounted(() => {
+    if (globalStore.openMenuTabs && !tabsStore.activeTabPath) {
+        handleMenuClick('/');
+    }
+
     loadStatus();
-    loadDataFromDB();
+    loadProductProFromDB();
+    globalStore.isFullScreen = false;
+    const mqList = window.matchMedia('(prefers-color-scheme: dark)');
+    if (mqList.addEventListener) {
+        mqList.addEventListener('change', () => {
+            switchTheme();
+        });
+    } else if (mqList.addListener) {
+        mqList.addListener(() => {
+            switchTheme();
+        });
+    }
 });
 </script>
 
@@ -122,32 +133,26 @@ onMounted(() => {
 .main-container {
     display: flex;
     flex-direction: column;
-    flex: 1;
-    flex-basis: auto;
     position: relative;
-    min-height: 100%;
-    height: calc(100vh);
-    transition: margin-left 0.28s;
+    height: 100vh;
+    transition: margin-left 0.3s;
     margin-left: var(--panel-menu-width);
-    background-color: #f4f4f4;
+    background-color: var(--panel-main-bg-color-9);
     overflow-x: hidden;
 }
 .app-main {
     padding: 20px;
     flex: 1;
-    flex-basis: auto;
     overflow: auto;
 }
 .app-sidebar {
-    transition: width 0.28s;
+    transition: width 0.3s;
     width: var(--panel-menu-width) !important;
-    height: 100%;
     position: fixed;
     font-size: 0px;
     top: 0;
     bottom: 0;
     left: 0;
-    z-index: 1001;
     overflow: hidden;
 }
 
@@ -162,15 +167,22 @@ onMounted(() => {
         width: calc(100% - var(--panel-menu-hide-width));
     }
 }
+
+.fullScreen {
+    .main-container {
+        margin-left: 0px;
+    }
+}
 // for mobile response 适配移动端
 .mobile {
     .main-container {
         margin-left: 0px;
     }
     .app-sidebar {
-        transition: transform 0.28s;
+        transition: transform 0.3s;
         width: var(--panel-menu-width) !important;
         background: #ffffff;
+        z-index: 9999;
     }
     .app-footer {
         display: block;
